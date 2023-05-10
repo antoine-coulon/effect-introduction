@@ -6,6 +6,10 @@ This introduction **is not about how to write Effect code** but rather focuses o
 
 N.B: If you're already comfortable with the inner problems and wish to jump straight into the **hows of Effect**, I suggest you to take a look at the official `Effect documentation` and the excellent crashcourse from @pigoz.
 
+## Source code
+
+In the `src/` folder you will be able to find the examples that will be used alongside the introduction.
+
 # Outcomes you can expect from the introduction
 
 - Understanding most commons problems we're facing as developers
@@ -807,21 +811,20 @@ Effect is in the first place an **Embedded Domain Specific Language (DSL)**. It 
 Effect is _simply_ an `Embedded Domain Specific Language with Initial encoding`! 
 
 
-Aware Tables (React): It's also an embedded DSL.
+Here is an example of a simple React DSL that helps us build Tables.
 
 ```tsx
   <Table<BrandPerformanceTurnover>>
     <Row>
       <Cell<BrandPerformanceTurnover>
-        dataKey="brand"
-        title={translate('metrics.brand.label')}
+        title={'something'}
         sort="enabled"
       />
     </Row>
   </Table>
 ```
 
-Unlike Effect, Table DSL is using a **Final** encoding meaning that the description is defined in terms of it's direct interpretation. The description is tighted to it's interpretation, not letting any room for multiple interpretations, optimizations and can be unsafe (Tables are not really concerned by that).
+Unlike Effect, this Table DSL is using a **Final** encoding meaning that the description is defined in terms of it's direct interpretation. In that case it means that there is a parent component that aims as an interpreter and will introspect all the children. The description is tighted to it's interpretation, not letting any room for multiple interpretations, optimizations and can be unsafe (Tables are not really concerned by that).
 
 
 ![bg left 50%](https://user-images.githubusercontent.com/43391199/232013993-da5f9e7e-7317-46eb-bd28-79802890ea99.png)

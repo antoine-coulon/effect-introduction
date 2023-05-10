@@ -1,0 +1,21 @@
+lockfileVersion: 5.4
+
+specifiers:
+  '@effect/data': 0.9.1
+  '@effect/io': 0.16.2
+
+dependencies:
+  '@effect/data': 0.9.1
+  '@effect/io': 0.16.2
+
+packages:
+
+  /@effect/data/0.9.1:
+    resolution: {integrity: sha512-kUbdMZhauO75wqxOLBFsDYkQOLRr8WPKF0QvUVVRDFYmWM7vIdI3emrHxnjM/Lm3KtnBcB3b2CaZbVNVbrBhBA==}
+    dev: false
+
+  /@effect/io/0.16.2:
+    resolution: {integrity: sha512-f4g4ZPvzkf1HNr3M4Fp7ZKl1gxXdcx9kxL5ugdbYskKl67ESiNslmsvkbr9STr9oAST7KO7+tL4quXFDsYvHYw==}
+    dependencies:
+      '@effect/data': 0.9.1
+    dev: false

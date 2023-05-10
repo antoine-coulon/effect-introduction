@@ -1,0 +1,15 @@
+{
+  "name": "effect-introduction",
+  "version": "1.0.0",
+  "description": "Introduction of the whys of Effect",
+  "keywords": [
+    "TypeScript",
+    "Effect"
+  ],
+  "author": "Antoine Coulon",
+  "license": "MIT",
+  "dependencies": {
+    "@effect/data": "0.9.1",
+    "@effect/io": "0.16.2"
+  }
+}

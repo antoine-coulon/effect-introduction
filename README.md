@@ -4,13 +4,15 @@ This introduction comes from Effect workshops I gave in which the main objective
 
 This introduction **is not about how to write Effect code** but rather focuses on why Effect might be an interesting pick for writing softwares using TypeScript as of today taking into account all the common problems we face as developers. As a rule of thumb, each developer should be aware of the problems a tool is solving before even trying to take a look at the implementation details. Hopefully with that short introduction you will **first become aware of the existing problems** and then **understand how elegantly and efficiently Effect solves them**.
 
-N.B: If you're already comfortable with the inner problems and wish to jump straight into the **hows of Effect**, I suggest you to take a look at the official `Effect documentation` and the excellent crashcourse from @pigoz.
+This is highly inspired by both excellent talks from [Michael Arnaldi (@mikearnaldi) at the WorkerConf](https://www.youtube.com/watch?v=zrNr3JVUc8I) and [Mattia Manzati at React Alicante](https://www.youtube.com/watch?v=uwALExyq4NY).
 
-## Source code
+N.B: If you're already comfortable with the problems Effect tries to solve and wish to jump straight into the **hows of Effect**, I suggest you to take a look at the official [Effect documentation](https://effect.website/) (still in the works) and the [excellent crashcourse from Stefano Pigozzi (@pigoz)](https://github.com/pigoz/effect-crashcourse).
 
-In the `src/` folder you will be able to find the examples that will be used alongside the introduction.
+## Samples and source code
 
-# Outcomes you can expect from the introduction
+In the `src/` folder you will be able to find some samples used alongside the introduction. There is also a TypeScript version if you prefer to both read the content and have the ready-to-be-run and type-checking samples.
+
+## Outcomes you can expect from the introduction
 
 - Understanding most commons problems we're facing as developers
 - Understanding limits we're facing as JavaScript/TypeScript developers
@@ -32,11 +34,12 @@ What are the most common challenges we are facing when developing softwares?
 - **Tracing & Logging**
  
 
-We'll show examples using TypeScript, but this is not only related to JavaScript/TypeScript concern. It **concerns every ecosystem, language**.
+We'll show examples using TypeScript, but this is not only related to JavaScript/TypeScript concern. It **concerns every ecosystem, language**, for instance Effect was initially heavily inspired by [ZIO](https://zio.dev/), its Scala counterpart, because the same problems apply to Scala.
+
 Hopefully, you'll realise that Effect is just a **tool that addresses hard problems** that we will always face, regardless the underlying ecosystem/language.
  
 
-## Explicitness 
+## 1. Explicitness 
 
 The ability of making a program self-describing, allowing to have a clear vision and understanding what outcomes the program can produce without having to run it.
 
@@ -62,7 +65,6 @@ function multiplyNumber() {
 Unfortunately when running the code our program crashes: `Error at <anonymous>`
 Without taking a look at the implementation of the `generateRandomNumber()`, we don't even know that this thing might throw an error. The consequence of that is having runtime defect makes the process just die. Think of that in a wider scope of a program, where this can be very hard to properly handle. 
 
-
 ```ts
 export function generateRandomNumber(): number {
     const randomNumber = Math.random();
@@ -76,8 +78,7 @@ export function generateRandomNumber(): number {
 }
 ```
 
-
-This behavior can be the root cause of defensive coding, for instance:
+This behavior can be the root cause of many problems including defensive coding, for instance:
 
 ```ts
 function defensiveMultiplyNumber() {
@@ -89,7 +90,6 @@ function defensiveMultiplyNumber() {
   }
 }
 ```
-
 
 Or we need to deal with runtime errors the hard way:
 
@@ -117,6 +117,8 @@ function blindlyCatch() {
 }
 ```
 
+The solution that we just found is not ideal and even if there is only thirty lines of code, compromises must already be done because we simply lack of explicitness.
+
 
 ## Asynchronous operations
 
@@ -140,6 +142,7 @@ doSomething().then(
 );
 ```
 
+However, Promises are both conceptually limited and lacking a lot of important features to deal with common problems that we face.
 
 ## Drawbacks of a Promise 😥
 
@@ -152,42 +155,45 @@ doSomething().then(
 - Not much built-in combinators (then) and static methods (all, allSettled, race, any).
 - No builtin interruption model.
 - No builtin retry logic.
-   
+
+Promises are everywhere and are part of most codebases when dealing with asynchronous programming, so you might wonder what could be a solid alternative to that. Let's jump right into it.
 
 ## Alternatives 1/2
 
-## **fp-ts**
+## fp-ts
 
 ![width:600px height:300px](https://user-images.githubusercontent.com/43391199/231682115-a9e9cf3c-e310-4eed-b7f8-2f67ccf96cde.png)
 
-## fp-ts
+[fp-ts](https://github.com/gcanti/fp-ts) created by [Giulio Canti (@gcanti)](https://github.com/gcanti) is the most popular functional programming library in the TypeScript ecosystem and provides developers with popular patterns and reliable abstractions from typed functional languages.
 
 fp-ts introduced primitives that allow to model such things:
 
-Synchronous
+**Synchronous**
 
-- `IO<A>`: Synchronous computation that can't fail
-- `IOEither<E, A>`: Synchronous computation that can fail with an error E
+- `IO<A>`: Represents a lazy and synchronous computation that are not expected to fail, meaning that executing the thunk produces a value `A`. 
+  
+```ts
+type IO<A> = () => A  
+```
 
-Asynchronous
+Because errors can't explicitely be represented using `IO<A>`, it means that conventionally the side effect must not throw any unexpected errors.
 
-- `Task<A>`: Asynchronous computation that can't fail
-- `TaskEither<E, A>`: Asynchronous computation that can fail with an error E
+- `IOEither<E, A>`: When it comes to explicitely representing a typed error that can be produced by the execution of a synchronous computation, **fp-ts** provides us `IOEither<E, A>`. It represents a synchronous computation that can fail with an error `E`.
 
-It's a great step towards a stronger primitives, but still requires us to make a difference between async or synchronous computations. Why should we care about whether it's async or sync? We don't care!
+**Asynchronous**
 
+- `Task<A>`: It is essentially the same as `IO<A>` except that it describes an asynchronous computation that is not expected to fail.
+- `TaskEither<E, A>`: It is essentially the same as `IOEither<E, A>` except that it describes an asynchronous computation that is expected to fail with an error `E`.
 
-## fp-ts
+Cool, we already found a solution to favor explicitness and model both the success or failure an operation can produce. It's a great step towards a stronger primitives, but still requires us to make a difference between asynchronous or synchronous computations. Why should we care about whether it's async or sync? We don't care! Ideally, we would like to be able to represent a computation that can both fail with an error `E` or succeed with a value `A` for all types of computations and always describe it the same way. There are already many difference between how to deal with asynchronous and synchronous error propagation, and there are even many ways to deal with asynchronous error handling (callbacks vs promises), we want to simplify that both at the type-level and at runtime.
 
 Moreover, there is still:
 - no builtin control over concurrency 
 - no builtin interruption
 - no builtin retry
-- composing/combining multiple Tasks gets quickly tricky and verbose
-- difference between sync and async operations
-- different data types to express computations IO, IOEither, Task, TaskEither, ReaderTaskEither...
+- composing/combining multiple Tasks gets quickly hard to read
+- semantic differences between synchronous and asynchronous operations
  
-
 ## Alternatives 2/2
 
 **Effect**
@@ -196,43 +202,32 @@ The new kid in town
 
 ![width:600px height:300px](https://user-images.githubusercontent.com/43391199/231682137-3658c039-df03-4b56-ad88-b854f4de2454.png)
 
+```ts
+/**
+ * An Effect is modeled with the datatype Effect<R, E, A>
+ * (R) represents requirements a computation needs in order to be run
+ * (E) represents the failure a computation can produce
+ * (A) represents the successful outcome a computation can produce
+ */ 
+interface Effect<R, E, A> {}
+```
 
-
-## Effect
-
-Effect is a data type that can be used to model everything at the same time:
+In the context of explicit outcomes, `Effect` is a data type that can be used to model everything at the same time:
 - no distinction between synchronous/asynchronous computations, everything is just a computation
-- can be used to model computations that can or can't fail, the Either datatype is embedded in the Effect one
+- can be used to model computations that are expected to fail or not fail, the `Either` datatype is embedded in the Effect data type
 
-
-## Effect 
-
-But also:
+But also Effect is:
 
 - highly composable
 - highly type-safe
-- explicit errors and dependencies management
+- explicit errors and dependencies management (dependencies and `R` and discussed right after)
 - builtin concurrency control
 - builtin interruption 
 - builtin retry
 - builtin resource management (acquire/release)
 
 
-
-The primary goal of an Effect is to act as a representation of a computation or more generally a program whose errors and dependencies are explicitely modeled.
-
-Effect is a datatype with 3 generic parameters 
-
-```ts
-/**
- * An Effect is modeled with the datatype Effect<R, E, A>
- * (R) represents requirements a computation needs in order to be run
- * (E) represents failures a computation can produce
- * (A) represents successful outcome a computation can produce
- */ 
-type Program<Requirements, Failures, Success> = Effect<Requirements, Failures, Success>;
-```
-
+The primary goal of an Effect is to act as a representation of a computation or more generally a program whose outcome (error or success) and dependencies are explicitely modeled.
 
 ## How we can improve that way of handling errors?
 
@@ -247,7 +242,6 @@ interface Either<E, A> {
 interface Result<Error, Success> extends Either<Error, Success> {}
 ```
 
-
 Effect integrates an `Either<E, A>` under the hood of each computation, making it both easy and explicit to deal with.
 
 ```ts
@@ -255,8 +249,7 @@ type _ = Effect<R, E, A>
 //                 ^__^ -> Either-like
 ```
 
-
-Rewriting it with Effect. Let's consider some code 
+Do you remember our first raw TypeScript samples? Let's rewrite it with Effect. Let's consider some code:
 
 ```ts
 
@@ -280,13 +273,12 @@ namespace EffectNumberGeneratorLibrary {
 
 ```
 
-
-Now we have to deal with the error when expecting something to not produce any failure i.e. having the return type `Effect<never, never, number>` meaning that this computation should be not be able to produce any **expected failure**(ignore the first generic as of now).
+If you take a close look at the `generateRandomNumber()` signature, you can see that we have the error typed as `Error`. Consequently if you describe an Effect that should not produce any known failure that is having the error channel typed as `never` (`Effect<never, never, number>`) and try to directly consume that effect, it won't compile.
 
 ```ts
 function multiplyNumberWithoutDealingWithError(): Effect.Effect<
   never,
-  never,
+  never, // E is typed as 'never', this Effect is not expected to produce failures (in the same way as IO<A> or Task<A>) 
   number
 > {
   return EffectNumberGeneratorLibrary.generateRandomNumber();
@@ -294,8 +286,7 @@ function multiplyNumberWithoutDealingWithError(): Effect.Effect<
 }
 ```
 
-
-Dealing with one error in a recoverable fashion
+So how do we come from a description of a computation that will eventually produce a failure to a computation that does not produce failures? Dealing with errors in a recoverable fashion is pretty straightforward.
 
 ```ts
 function multiplyNumberWhenDealingWithError(): Effect.Effect<
@@ -306,14 +297,15 @@ function multiplyNumberWhenDealingWithError(): Effect.Effect<
   return pipe(
     EffectNumberGeneratorLibrary.generateRandomNumber(),
     Effect.flatMap((number) => Effect.succeed(number * 2)),
-    // Handling the error and returning a result value instead
+    // Recovering from the error and producing a successful result value instead
     Effect.catchAll(() => Effect.succeed(0))
   );
 }
 ```
- 
 
-We can model multiple failures using tagged classes
+After having described our recovery logic, the error channel is immediately being changed from `Error` to `never` meaning that `multiplyNumberWhenDealingWithError` computation can benefit from the description of a computation that won't produce expected failures. Consequently we can just deal nicely with that outcome by relying on the typings and be confident about the outcome of the computation.
+ 
+Moreover, we can also model multiple failures using tagged classes
 
 ```ts
 
@@ -336,8 +328,7 @@ namespace Effect2NumberGeneratorLibrary {
 }
 ```
 
-
-Then it's easy to deal with failures represented as a union, because we can pattern match
+Then it's easy to deal with failures represented as a union, because we can pattern match and recover from either specific failures or all failures. Depending on that choice, pattern matched failures will be erased from the error channel and other ones will just remain until some recovery logic is defined at some point. 
 
 ```ts
 
@@ -356,13 +347,11 @@ function multiplyNumberWhenDealingWithErrors(): Effect<never, never, number> {
 
 ```
  
-
-## Explicitness
-
 **Explicit dependencies**
 
+Effect can embed contextual information in the same way as the `Reader` data type from `fp-ts` was describing it.
 
-Effect can embed contextual information. It makes the dependencies required for the computation to be run explicit:
+It makes the dependencies required for the computation to be run also explicit:
 
 ```ts
 
@@ -376,7 +365,7 @@ interface UserService {
 const UserService = Context.Tag<UserService>();
 
 function createUser(): Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser> {
-                                    // ^ dependencies
+                                    // ^ explicit dependencies
   return pipe(
     UserService,
     Effect.flatMap((userService) => userService.createUser()),
@@ -384,7 +373,6 @@ function createUser(): Effect.Effect<UserService, UserAlreadyExistsError, Create
 }
 
 ```
-
 
 What it means is that `createUser` needs an instance of some service that implements the interface `UserService`. Otherwise, the program does not compile:
 
@@ -395,25 +383,39 @@ What it means is that `createUser` needs an instance of some service that implem
   // ^ Type 'UserService' is not assignable to type 'never': ts(2345)
 ```
 
-We can't compile the program because we didn't satisfy the dependencies.
+We can't compile the program because we didn't satisfy the dependencies. One other benefit of having explicit dependencies is that conceptually the requirements are very clear and dependencies are not hidden/implicit. Dependencies appearing in the `R` generic type parameter is only refering to interfaces not any real implementations, this has for consequence to let room for the Dependency Inversion Principle to easily spread everywhere in a effortless way.
 
-
-## Type-safe dependency injection
+### Type-safe dependency injection
 
 ```ts
 Effect.runPromise(
-  createUser(),
-  // Dependency injection
-  Effect.provideService(UserService, {
-    createUser: () =>
-      // We don't care about the implementation, it could be anything
-      Effect.fail(new UserAlreadyExistsError("User already exists")),
-  })
+  pipe(
+    createUser(),
+    // Dependency injection
+    Effect.provideService(UserService, {
+      createUser: () =>
+        // We don't care about the implementation, it could be anything
+        Effect.fail(new UserAlreadyExistsError("User already exists")),
+    })
+  )
 );
 ```
 
+Until we provide the service implementation, the program won't compile because all the computation requirements are not satisfied.
 
-## Testing
+```ts
+Effect.runPromise(something as Effect<SomethingService, never, void>)
+// ^ This won't compile, a computation for which all the requirements are not satisfied (SomethingService) can't be executed.
+
+Effect.runPromise(
+  pipe(
+    something, // is now Effect<never, never, void>, because an implementation matching the interface was injected.
+    Effect.provideService(SomethingService, {})
+  )
+);
+```
+
+## 3. Testing
 
 Testing is the ability of asserting that a system behaves as expected. As obvious as it may seem, testing can be very tricky if the program is coupled to implementation details and has implicit (hidden dependencies) that we can't control.
 
@@ -434,7 +436,6 @@ function createUser(): Effect.Effect<UserService, UserAlreadyExistsError, Create
   );
 }
 ```
-
 
 Having that Dependency Inversion Principle applied together with the builtin dependency injection mechanism, we can easily test programs:
 
@@ -458,7 +459,6 @@ it("Should do something", async () => {
 
 ```
 
-
 ## Resilience
 
 Resilience is the art of being resilient of failures that is being able to handle efficiently and recover from all types of errors.
@@ -470,7 +470,6 @@ We saw that explicitness and type-safety offered by Effect allows us to erase a 
 Effect is a very powerful datatype, with a deep inference mechanism making Effect programs highly type-safe. It brings the type-safety to a whole new level by using TypeScript in a excellent way.
 
 As we saw from the "Explicitness" part, Effect forces us to deal with errors case and forces us to describe computations that are both mathematically correct and make sense from a computer science perspective.
-
 
 But most of the time, we don't only want to catch error, we also want to retry with some specific logic or any other specific behavior.
 

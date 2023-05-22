@@ -1,8 +1,14 @@
+**Important note: This is still in the making but as this was requested, I'm open-sourcing the first version**.
+
 # A practical introduction to the whys of Effect
 
 This introduction comes from Effect workshops I gave in which the main objective was to explain in few hours the whys of Effect coming from raw JavaScript/TypeScript.
 
 This introduction **is not about how to write Effect code** but rather focuses on why Effect might be an interesting pick for writing softwares using TypeScript as of today taking into account all the common problems we face as developers. As a rule of thumb, each developer should be aware of the problems a tool is solving before even trying to take a look at the implementation details. Hopefully with that short introduction you will **first become aware of the existing problems** and then **understand how elegantly and efficiently Effect solves them**.
+
+## **Effect is a well-rounded tool solving a lot of well-known software engineering problems. Let's first talk about problems before solutions.**
+
+**Inspiration**
 
 This is highly inspired by both excellent talks from [Michael Arnaldi (@mikearnaldi) at the WorkerConf](https://www.youtube.com/watch?v=zrNr3JVUc8I) and [Mattia Manzati at React Alicante](https://www.youtube.com/watch?v=uwALExyq4NY).
 
@@ -12,12 +18,14 @@ N.B: If you're already comfortable with the problems Effect tries to solve and w
 
 In the `src/` folder you will be able to find some samples used alongside the introduction. There is also a TypeScript version if you prefer to both read the content and have the ready-to-be-run and type-checking samples.
 
+Note: TypeScript files are still in the making so they might be incomplete/outdated as of now.  
+
 ## Outcomes you can expect from the introduction
 
-- Understanding most commons problems we're facing as developers
-- Understanding limits we're facing as JavaScript/TypeScript developers
-- Basic understanding of Effect 
-- Basic understanding of an "Effect System"
+- **Understanding most commons problems we're facing as developers**
+- **Understanding limits we're facing as JavaScript/TypeScript developers**
+- **Basic understanding of Effect**
+- **Basic understanding of an "Effect System"**
  
 
 Before diving into Effect, let's take a step back talking about what problems we commonly face as developers.
@@ -34,10 +42,10 @@ What are the most common challenges we are facing when developing softwares?
 - **Tracing & Logging**
  
 
-We'll show examples using TypeScript, but this is not only related to JavaScript/TypeScript concern. It **concerns every ecosystem, language**, for instance Effect was initially heavily inspired by [ZIO](https://zio.dev/), its Scala counterpart, because the same problems apply to Scala.
+We'll show examples using TypeScript, but this is not only related to JavaScript/TypeScript concern. It **concerns every ecosystem, language**, for instance Effect was initially heavily inspired by [ZIO](https://zio.dev/), its Scala counterpart, because most of the problems also apply to Scala.
 
 Hopefully, you'll realise that Effect is just a **tool that addresses hard problems** that we will always face, regardless the underlying ecosystem/language.
- 
+
 
 ## 1. Explicitness 
 
@@ -415,7 +423,7 @@ Effect.runPromise(
 );
 ```
 
-## 3. Testing
+## 2. Testing
 
 Testing is the ability of asserting that a system behaves as expected. As obvious as it may seem, testing can be very tricky if the program is coupled to implementation details and has implicit (hidden dependencies) that we can't control.
 
@@ -459,13 +467,13 @@ it("Should do something", async () => {
 
 ```
 
-## Resilience
+## 3. Resilience
 
 Resilience is the art of being resilient of failures that is being able to handle efficiently and recover from all types of errors.
 
 We saw that explicitness and type-safety offered by Effect allows us to erase a whole set of bugs and cleanly deal with errors. 
 
-`If it compiles, it works` - Michael Arnaldi (creator of Effect)
+`If it compiles, it works` - slogan in the making. I can confirm that from my Effect experience since one year and a half.
 
 Effect is a very powerful datatype, with a deep inference mechanism making Effect programs highly type-safe. It brings the type-safety to a whole new level by using TypeScript in a excellent way.
 
@@ -599,14 +607,11 @@ pipe(
 There is a guarantee that the release Effect return by the `asyncInterrupt` method will be executed. The interruption model also allows us to have a fine-grained control over interruptibility. 
 
 
-## Composability
+## 4. Composability
 
 The art of having a set of reusable software components that can be easily combined, extended, specialized and in a scalable, maintainable and understable way. 
 
 Effect `does exactly that`. Thanks to all its primitives and very rich standard library, it allows us to model everything we need on a daily basis. 
-
-
-## Composability
 
 ```ts
 pipe(
@@ -629,7 +634,7 @@ pipe(
 ```
 
 
-## Concurrency
+## 5. Concurrency
 
 Concurrency is the art of running multiple computations cooperatively to improve the overall speed of the program execution.
 
@@ -787,7 +792,7 @@ If we race something with that Effect and it loses, the cleanup function will be
 There are a lot of features around that, that are out of the scope of the introduction.
 
 
-## Efficiency & Performance
+## 6. Efficiency & Performance
 
 Efficiency and Performance are both related and unrelated at the same time.
 
@@ -825,6 +830,7 @@ Here is an example of a simple React DSL that helps us build Tables.
 
 Unlike Effect, this Table DSL is using a **Final** encoding meaning that the description is defined in terms of it's direct interpretation. In that case it means that there is a parent component that aims as an interpreter and will introspect all the children. The description is tighted to it's interpretation, not letting any room for multiple interpretations, optimizations and can be unsafe (Tables are not really concerned by that).
 
+If you want to know more about TypeScript DSLs, [here is an excellent blog post](https://dev.to/effect-ts/building-custom-dsls-in-typescript-29el) from [Michael Arnaldi, the creator of Effect](https://github.com/mikearnaldi)
 
 ![bg left 50%](https://user-images.githubusercontent.com/43391199/232013993-da5f9e7e-7317-46eb-bd28-79802890ea99.png)
 
@@ -838,12 +844,11 @@ Effect is just a description! All data types are used to model a set of computat
 
 One of the biggest strengths of Effect is that without even executing anything, by just leveraging mathematical concepts and the TypeScript compiler, it is already a proof of whether the program is correct or not.
 
-`If it compiles, it works` - **Michael Arnaldi (creator of Effect)**
-
 The whole purpose of **Effect Systems** that aim to represent side-effectful operations that a program might process at some point. The objective is to have a full control and defer at the most end the execution of all those side effects, when the program was understood by both the compiler and the runtime.
 
 It lets room for a lot of performance, composability, substitutions, optimizations, type-safety, stack-safety, concurrency...
 
+See this brilliant article from [John A. De Goes, the creator of ZIO](https://degoes.net/about/): [no-effect-tracking](https://degoes.net/articles/no-effect-tracking)
 
 **Effect Systems**
 
@@ -852,13 +857,11 @@ It lets room for a lot of performance, composability, substitutions, optimizatio
 
 **John A. De Goes, (creator of ZIO, Effect ancestor)**
 
-
 Now that we have described our program using the Effect DSL, how to execute the underlying computation?
 
 We need an **Interpreter**!
 
 Let's do that.
-
 
 **Effect Runtime**
 
@@ -873,22 +876,21 @@ Erlang...
 C#...
 
 
-Let's see how to use the built in Effect runtime!
+Let's see how to use the built in Effect runtime! **(src/06-runtime.ts)**
 
 
 Other interesting facts about the fiber-based runtime:
 
 - It's stack safe, because it controls the execution of operations, it's able to determine how much operations it can execute on the current tick of the Event Loop. 
-- It's memory efficient because after 2048 operations, the fiber yields, letting the Event Loop breath and letting other tasks run.  
+- It's memory efficient because after X operations (currently 2048), the fiber yields, letting the Event Loop breath and letting other tasks run.  
 - It's overall faster, because the runtime can combine/batch/eliminate operations and tries to leverage synchronous operations as much as it can. 
 
 
-## Tracing & Logging
+## 7. Tracing & Logging
 
 Effect also directly embeds primitives for Logging, Tracing and even Metrics.
 
 It can be integrated with OpenTelemetry, Prometheus, etc.
-
 
 
 Summary
@@ -903,17 +905,19 @@ Summary
 
 All that in just one tool, with TypeScript.
 
+The standard library is very rich and we didn't cover everything there! In addition to the standard library, there is also a set of useful additional packages:
 
-Also:
-
-- @effect/schema 
-- @effect/match
-- @effect/cli
-- @effect/process
+- [@effect/schema](https://github.com/Effect-TS/schema)
+- [@effect/match](https://github.com/Effect-TS/match)
+- [@effect/cli](https://github.com/Effect-TS/cli)
+- [@effect/rpc](https://github.com/Effect-TS/rpc)
+- [@effect/process](https://github.com/Effect-TS/process)
+- [@effect/fastify](https://github.com/Effect-TS/fastify)
   
 And many more to come
 
+Other resources: 
 
-Thanks for listening.
+- **[Official Effect documentation](https://effect.website/)**
+- **[@effect/io documentation](https://effect-ts.github.io/effect/)**
 
-Questions?

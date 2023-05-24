@@ -1,3 +1,7 @@
+<p align="center" width="100%">
+  <img src="https://github.com/antoine-coulon/effect-introduction/assets/43391199/7ea5463f-1aae-47cc-a20a-c87f2c9224db" alt="Effect, next generation TypeScript">
+</p>
+
 **Important note: This is still in the making but as this was requested, I'm open-sourcing the first version**.
 
 # A practical introduction to the whys of Effect

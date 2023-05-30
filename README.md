@@ -363,50 +363,78 @@ function multiplyNumberWhenDealingWithErrors(): Effect<never, never, number> {
 
 Effect can embed contextual information in the same way as the `Reader` data type from `fp-ts` was describing it.
 
-It makes the dependencies required for the computation to be run also explicit:
+It makes the dependencies required for the computation to be run also explicit. Let's say we have a very simple use case whose purpose is to register a new user on a given platform. 
+The use case is meant to be agnostic of implementation details, that means that it ignores how the user registration is indeed persisted, whether it is in a database or some other storage service. 
+The only thing the use case is responsible for is to orchestrate correctly all the business requirements. 
+In our very simple example below, it's only registering the user to a given storage (in a real world application it could be dispatching a domain event, and putting both the user registration and the even dispatch in the same transaction, a la [Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html) for instance).
 
 ```ts
 
 import * as Effect from "@effect/io/Effect";
 import * as Context from "@effect/data/Context";
 
-interface UserService {
-  createUser: () => Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser>;
+interface UserRepository {
+  createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
 }
 
-const UserService = Context.Tag<UserService>();
+const UserRepository = Context.Tag<UserRepository>();
 
-function createUser(): Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser> {
-                                    // ^ explicit dependencies
+// Use case depending on an abstract User Repository
+function registerUser(): Effect.Effect<UserRepository, UserAlreadyExistsError, CreatedUser> {
+                                    // ^ explicit dependency
   return pipe(
-    UserService,
-    Effect.flatMap((userService) => userService.createUser()),
+    UserRepository,
+    Effect.flatMap((userRepository) => userRepository.createUser()),
+    // ... do something more as part of the use case, sending domain events, etc.
   );
 }
 
 ```
 
-What it means is that `createUser` needs an instance of some service that implements the interface `UserService`. Otherwise, the program does not compile:
+What it means is that `registerUser` needs an instance of some service that implements the interface `UserRepository`. Otherwise, the program does not compile:
 
 ```ts
-  Effect.runPromise(
-    createUser()
-  )
-  // ^ Type 'UserService' is not assignable to type 'never': ts(2345)
+const mainProgram = Effect.runPromise(registerUser());
+      // ^ Type 'UserRepository' is not assignable to type 'never': ts(2345)
 ```
 
-We can't compile the program because we didn't satisfy the dependencies. One other benefit of having explicit dependencies is that conceptually the requirements are very clear and dependencies are not hidden/implicit. Dependencies appearing in the `R` generic type parameter is only refering to interfaces not any real implementations, this has for consequence to let room for the Dependency Inversion Principle to easily spread everywhere in a effortless way.
+We **can't compile the program because we didn't satisfy the dependencies**. One other benefit of having explicit dependencies is that conceptually the requirements are very clear and dependencies are not hidden/implicit. 
+Dependencies appearing in the `R` generic type parameter is only refering to interfaces not any real implementations, this has for consequence to let room for the **Dependency Inversion Principle to easily spread everywhere in a effortless way**.
+
+This example shows the use of one dependency, but it's important to note that Effect is able to **deeply infer the dependencies required as a TypeScript Union type**, wherever the dependencies come from in the Effect tree:
+
+```ts
+const computation1: Effect<DependencyA, never, number> = {};
+
+const computation2: Effect<DependencyB, never, number> = {};
+
+const program: Effect<DependencyA | DependencyB, never, number> = Effect.gen(function* ($) {
+                      // ^ See how both respective dependencies from "computation1" and "computation2"
+                      // now were propagated in the dependencies of our main program, represented as a typed union.
+  const result1 = yield* $(effect1);
+  const result2 = yield* $(effect2);
+
+  return result1 + result2;
+});
+```
+
+In that case, there is no deep Effect nesting but the principle remains the same.
+
+If you're interested in the story behind the representation of the dependencies as a Union Type, [here is the section explaining that in the official Effect documentation](https://effect.website/docs/faq/coming-from-zio).
 
 ### Type-safe dependency injection
+
+Just before, we mentioned the fact that until a required dependency is satisfied, the program won't compile. Effect provides us a type-safe dependency injection mechanism helping us satisfy the dependency graph.
 
 ```ts
 Effect.runPromise(
   pipe(
-    createUser(),
+    registerUser(),
     // Dependency injection
-    Effect.provideService(UserService, {
+    Effect.provideService(UserRepository, {
       createUser: () =>
-        // We don't care about the implementation, it could be anything
+        // We don't care about the implementation, it could be anything.
+        // Here we just satisfy the interface by producing the expected failure
         Effect.fail(new UserAlreadyExistsError("User already exists")),
     })
   )
@@ -421,30 +449,63 @@ Effect.runPromise(something as Effect<SomethingService, never, void>)
 
 Effect.runPromise(
   pipe(
-    something, // is now Effect<never, never, void>, because an implementation matching the interface was injected.
+    something, // now becomes Effect<never, never, void>, because an implementation matching the interface was injected.
     Effect.provideService(SomethingService, {})
   )
 );
 ```
 
+**Service composition**
+
+In real-world application scenarios, services would also depend on a set of other services quickly creating a complex dependency graph to satisfy. 
+
+```mermaid
+  graph TD;
+      ServiceA-->ServiceB;
+      ServiceA-->ServiceC;
+      ServiceC-->ServiceD;
+      ServiceC-->ServiceE;
+      ServiceC-->ServiceF;
+```
+
+Thankfully to manage dependency injection at scale, Effect embeds `Layers` which are **recipes for creating services in a composable, effectul, resourceful and asynchronous way**. 
+Their goal is to overcome standard constructor limitations and offer more powerful and safe service construction primitives.
+
+Layers describe a set of required dependencies (In) and produces a set of composed dependencies (Out). During Layer construction, errors can occur, hence the Layer signature:
+
+```ts
+export interface Layer<RIn, E, ROut> {}
+```
+
+In the same spirit as for Effects, using Layers for which dependencies are not satisfied will result in compilation errors. 
+
+As part of the introduction, this `Layer` section ends up there. If you want to know more about Layers, here is a list of advanced resources:
+- [Effect API reference](https://effect-ts.github.io/io/modules/Layer.ts.html)
+- [Layer chapter from pigoz's crashcourse](https://stackblitz.com/github/pigoz/effect-crashcourse?file=006-layer.ts)
+- [ZIO ZLayer documentation](https://zio.dev/reference/di/zlayer-constructor-as-a-value)
+
 ## 2. Testing
 
 Testing is the ability of asserting that a system behaves as expected. As obvious as it may seem, testing can be very tricky if the program is coupled to implementation details and has implicit (hidden dependencies) that we can't control.
 
-Thankfully, Effect is explicit towards dependencies and favors the use of the Dependency Inversion Principle (DIP) by forcing each computation to depend on an abstraction (interface) rather than on an implementation:
+Thankfully, Effect is explicit towards dependencies and favors the use of the Dependency Inversion Principle (DIP) by forcing each computation to depend on an abstraction (interface) rather than on an implementation. 
+
+Let's come back to our previous section example:
 
 ```ts
-interface UserService {
-  createUser: () => Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser>;
+interface UserRepository {
+  createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
 }
 
-const UserService = Context.Tag<UserService>();
+const UserRepository = Context.Tag<UserRepository>();
 
-function createUser(): Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser> {
+function someUseCase(): Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser> {
   return pipe(
-    UserService,
-    // ^ Just a Tag linked to an interface, there is no implementation yet
-    Effect.flatMap((userService) => userService.createUser()),
+    UserRepository,
+    // ^ Just a Tag linked to an interface, there is no implementation yet.
+    // The use case completely ignores the implementation of the repository,
+    // it just relies on its interface.
+    Effect.flatMap((userRepository) => userRepository.createUser()),
   );
 }
 ```
@@ -453,7 +514,7 @@ Having that Dependency Inversion Principle applied together with the builtin dep
 
 ```ts
 
-class FakeUserServiceImpl implements UserService {
+class InMemoryUserRepository implements UserRepository {
   createUser() {
     // 
   }
@@ -463,13 +524,15 @@ it("Should do something", async () => {
   const user = await Effect.runPromise(
     pipe(
       createUser(), 
-      Effect.provideService(UserService, FakeUserServiceImpl)
+      Effect.provideService(UserRepository, InMemoryUserRepository)
     )
   );
   expect(user).toEqual("something");
 });
 
 ```
+
+Note that this is also beneficial for many other use cases other than testing, for instance changing very easily implementations of a service without breaking code depending on the contract.
 
 ## 3. Resilience
 

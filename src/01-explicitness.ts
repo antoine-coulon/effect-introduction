@@ -181,35 +181,65 @@ class UserAlreadyExistsError {
 
 class CreatedUser {}
 
-interface UserService {
-  createUser: () => Effect.Effect<
-    UserService,
-    UserAlreadyExistsError,
-    CreatedUser
-  >;
+interface UserRepository {
+  createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
 }
 
 import * as Context from "@effect/data/Context";
 
-const UserService = Context.Tag<UserService>();
+const UserRepository = Context.Tag<UserRepository>();
 
-function createUser(): Effect.Effect<
-  UserService,
-  UserAlreadyExistsError,
-  CreatedUser
-> {
-  return pipe(
-    UserService,
-    Effect.flatMap((userService) => userService.createUser())
-  );
-}
+const useCases = {
+  registerUser(): Effect.Effect<
+    UserRepository,
+    UserAlreadyExistsError,
+    CreatedUser
+  > {
+    return pipe(
+      UserRepository,
+      Effect.flatMap((userService) => userService.createUser())
+    );
+  },
+};
 
 Effect.runPromise(
   pipe(
-    createUser(),
-    Effect.provideService(UserService, {
+    useCases.registerUser(),
+    Effect.provideService(UserRepository, {
       createUser: () =>
         Effect.fail(new UserAlreadyExistsError("User already exists")),
     })
   )
 );
+
+// Dependencies are propagated as a typed union
+
+interface DependencyA {
+  _tag: "DependencyA";
+}
+
+const DependencyA = Context.Tag<DependencyA>();
+
+interface DependencyB {
+  _tag: "DependencyB";
+}
+const DependencyB = Context.Tag<DependencyB>();
+
+const computation1 = pipe(
+  DependencyA,
+  Effect.map(() => 1)
+);
+
+const computation2 = pipe(
+  DependencyB,
+  Effect.map(() => 2)
+);
+
+const program = Effect.gen(function* ($) {
+  // ^ See how both respective dependencies from "computation1" and "computation2"
+  // now were propagated in the dependencies of our main program, represented as a typed union.
+  const result1 = yield* $(computation1);
+  const result2 = yield* $(computation2);
+
+  return result1 + result2;
+});

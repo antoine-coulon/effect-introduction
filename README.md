@@ -37,13 +37,13 @@ Effect is a tool in the same way as TypeScript is a tool. Our responsibility is 
 
 What are the most common challenges we are facing when developing softwares?
 
-- **Explicitness**
-- **Testing**
-- **Resilience**
-- **Composability**
-- **Concurrency**
-- **Efficiency & Performance**
-- **Tracing & Logging**
+- ### [**Explicitness**](#1-explicitness)
+- ### [**Testing**](#2-testing)
+- ### [**Resilience**](#3-resilience)
+- ### [**Composability**](#4-composability)
+- ### [**Concurrency**](#5-concurrency)
+- ### [**Efficiency & Performance**](#6-efficiency--performance)
+- ### [**Tracing & Logging**](#7-tracing--logging)
  
 
 We'll show examples using TypeScript, but this is not only related to JavaScript/TypeScript concern. It **concerns every ecosystem, language**, for instance Effect was initially heavily inspired by [ZIO](https://zio.dev/), its Scala counterpart, because most of the problems also apply to Scala.

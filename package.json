@@ -9,7 +9,9 @@
   "author": "Antoine Coulon",
   "license": "MIT",
   "dependencies": {
-    "@effect/data": "0.9.1",
-    "@effect/io": "0.16.2"
+    "@effect/data": "0.12.5",
+    "@effect/io": "0.26.0",
+    "tsx": "^3.12.7",
+    "typescript": "^5.1.3"
   }
 }

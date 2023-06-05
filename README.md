@@ -193,7 +193,6 @@ The solution that we just found is not ideal and even if there is only thirty li
 One way to model an async computation with JavaScript is using a Promise whose results is always delivered asynchronously.
 
 ```ts
-
 function doSomething(): Promise<number> {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -214,15 +213,46 @@ However, Promises are both conceptually limited and lacking a lot of important f
 
 ## Drawbacks of a Promise 😥
 
-- Eagerly executed, hence is impure, referentially-opaque and is running computation (already a value).
-- Because of the reasons above, can't be used around for writing functional programs.
-- Implicit memoization of the result (either success or failure).
-- Has only one generic parameter: `Promise<A>`. The error is non-generic/non-polymorphic.
-- Can't depend on any contextual information.
-- No control over concurrency.
-- Not much built-in combinators (then) and static methods (all, allSettled, race, any).
-- No builtin interruption model.
-- No builtin retry logic.
+- **Eagerly executed, hence is impure, referentially-opaque and is running computation (already a value). Consequently, can't be used around for writing functional programs.**
+
+You might already know this eager nature of a Promise, but you might not know that it prevents many interesting rules to be applied. 
+
+Purity and referential transparency are important concepts in Functional Programming because they allow you to make assumptions about the behavior of your program levaraging mathematical laws (compositions and substitutions of expressions, etc). Moreover, it helps reasoning about the behavior of your program by just looking at the types, which is what we also target with explicitness. By leveraging compilers, in our case TypeScript, we will be constrained to a set of well-behaved types and principles, allowing us to eliminate whole classes  of bugs and unexpected behaviors.
+
+A more detailed version of the explanation is available in the **[01-explicitness.ts](https://github.com/antoine-coulon/effect-introduction/blob/main/src/01-explicitness.ts) source file**
+
+- **Implicit memoization of the result (either success or failure).**
+
+ As we already said, a Promise is eagerly executed. It means that as soon as you create a Promise, the computation is already running and might have already completed with a value. That value produced by the Promise is implicitly memoized meaning that when the Promise is settled, the internal state of the Promise is frozen and can't be changed anymore, whether the Promise is fulfilled or rejected. Consequently if you want to run the same computation again, you'll need to recreate the Promise from scratch. Altough this is convenient because it allows subscribers to receive the value even when registering for it after the Promise produced its value, this makes the behavior of a Promise non-reusable and does not favor retries and compositions.
+  
+- **Has only one generic parameter: `Promise<A>`. The error is non-generic/non-polymorphic.**
+
+Promise has only one generic parameter, which is the type of the value produced. This is not really convenient because it means that the error is not reflected by default in the type of the Promise. This highly restricts the type-level expressiveness and forces us to deal with untyped and unknown failures. We could say that only generic parameter can be used to represent the error using Either/Result representations, but this model has its own limitations when it comes to combining many operations together and when trying to inferthe type of the errors of the whole chain. 
+
+- **Can't depend on any contextual information.**
+
+A Promise can't explicitely encode the fact of depending on some contextual information. It means that if you want to run a Promise that depends on some input context, dependencies can not be explicitely modeled hence it is impossible to statically constrain the Promise to only be run in a valid context i.e. with all the requirements satisfied.
+
+This is a problem because this means that Promises can implicitely rely on hidden dependencies and does not offer any flexibility when it comes to composition and dependency injection. By nesting Promises, that implicit layer of dependencies will grow and it will be harder to reason about the behavior and the requirements of the program.  
+
+A more detailed version of the explanation is available in the **[01-explicitness.ts](https://github.com/antoine-coulon/effect-introduction/blob/main/src/01-explicitness.ts) source file**
+
+- **No control over concurrency.**
+
+Natively, a Promise does not offer any control execution over concurrency 
+so when composing many Promises together, you can't control how many Promises
+can be spawned and run in parallel (unbounded concurrency). 
+This is a problem because in most cases you will end up either spawning too many 
+Promises and overloading the system or constrain Promises to run sequentially 
+and not taking advantage of the asynchronous nature of the platform.
+
+This is talked in more details in the  [**Concurrency**](#5-concurrency) section of the introduction.
+
+- **Not much built-in combinators (then) and static methods (all, allSettled, race, any).**
+  
+- **No builtin interruption model.**
+
+- **No builtin retry logic.**
 
 Promises are everywhere and are part of most codebases when dealing with asynchronous programming, so you might wonder what could be a solid alternative to that. Let's jump right into it.
 

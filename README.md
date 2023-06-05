@@ -31,7 +31,6 @@ Note: TypeScript files are still in the making so they might be incomplete/outda
 - **Basic understanding of Effect**
 - **Basic understanding of an "Effect System"**
  
-
 Before diving into Effect, let's take a step back talking about what problems we commonly face as developers.
 Effect is a tool in the same way as TypeScript is a tool. Our responsibility is to first understand the problems as it would help us finding the good solutions. 
 
@@ -50,8 +49,65 @@ We'll show examples using TypeScript, but this is not only related to JavaScript
 
 Hopefully, you'll realise that Effect is just a **tool that addresses hard problems** that we will always face, regardless the underlying ecosystem/language.
 
+Before diving into these problems and the solutions Effect brings, let me just do a pretty
+quick prelude that will help you understand right away the approach.
+
+## 0. Prelude
+
+Let's talk a little bit about the Effect datatype in itself with a bit of background history.
+
+`Effect` is the core datatype of the ecosystem, but what if I tell you that it
+could have been called `Program` instead? The reason for that is that Effect
+tries to model exactly what a program is, that is something that requires
+an environment to run, that can fail with an error or succeed with a value.
+
+> You can see the original conversation started by @mikearnaldi [just there in Effect's Discord](https://discord.com/channels/795981131316985866/795983589644304396/948653981863923813)
+ 
+Consequently, Effect is a datatype with 3 generic type parameters:
+`R`: represents the **environment** required to run the program
+`E`: represents the **error** that can be produced by the program
+`A`: represents the **value** that can be produced by the program
+
+Resulting in: `Effect<R, E, A>`.
+
+```ts
+import type { Effect } from "@effect/io/Effect";
+
+type Program<Environment, Error, Success> = Effect<
+  Environment,
+  Error,
+  Success
+>;
+```
+
+Let's just model a simple command-line interface program (with a very high
+level of abstraction). We can say that our command line program requires
+a process to run, that will be granted by the OS. It's represented by the first
+generic type parameter `R`. Then, our program can fail with an error of type
+`E` (Standard Error) or succeed with a value of type `A` (Standard Output).
+
+```ts
+type Process = any;
+type Stdout = any;
+type Stderr = any;
+
+type CommandLineProgram = Program<Process, Stderr, Stdout>;
+```
+
+Having these 3 generic parameters explicitly defined in the type signature
+of our program allows us to have a very precise understanding of what our
+program is doing and what it can produce as a result. In addition to explicitness,
+Effect provides us a very strong type safety guarantee that the constraints of the
+generic type parameters will be respected by the implementation of the program.
 
 ## 1. Explicitness 
+
+<p align="left">
+    <a href="https://github.com/antoine-coulon/effect-introduction/blob/main/src/01-explicitness.ts" target="_blank">
+      <img src="https://skillicons.dev/icons?i=ts" width="25" />
+      Go to source file (01-explicitness.ts)
+     </a>
+</p>
 
 The ability of making a program self-describing, allowing to have a clear vision and understanding what outcomes the program can produce without having to run it.
 

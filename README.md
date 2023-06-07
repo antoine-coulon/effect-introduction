@@ -248,11 +248,24 @@ and not taking advantage of the asynchronous nature of the platform.
 
 This is talked in more details in the  [**Concurrency**](#5-concurrency) section of the introduction.
 
-- **Not much built-in combinators (then) and static methods (all, allSettled, race, any).**
+- **Not much built-in combinators (then, catch, finally) and static methods (all, allSettled, race, any, resolve, reject).**
+
+By default, Promises don't have much combinators to work with nor Promise constructors and are lacking some important features, for instance `all` and `allSettled` are _unbounded_ concurrency-wise, `race` and `any` are working as expected but are unsafe because "race losers" are not cleanly interrupted hence underlying resources can not be released (it's also the case for `Promise.all`).
   
 - **No builtin interruption model.**
 
+Following what was said just before, Promises unfortunately don't have a built-in interruption model. There was one attempt to [introduce cancelation to Promises that was withdrawn](https://github.com/tc39/proposal-cancelable-promises) for some [unclear reasons](https://github.com/tc39/proposal-cancelable-promises/issues/70). My 2 cents is that it was because adding cancelation into Promises would have introduced too many changes, and the initial design constrained the evolution of the builtin features around Promises.
+
+In any case as of now, we are not able to cancel a Promise using the standard API.
+
 - **No builtin retry logic.**
+
+Another feature which won't never see the light of day is the built-in retry policies. Given that a Promise already represents a running computation in itself, it can not be easily retried without being constructed again. We can work around these limitations by introducing lazy promises which are nothing but Promises wrapped in functions over which we have the control, but this approach reduce flexibility, composability and introduce quickly some avoidable complexity.
+
+A more detailed version of the explanation is available in the **[03-resilience.ts](https://github.com/antoine-coulon/effect-introduction/blob/main/src/03-resilience.ts) source file**
+
+
+---
 
 Promises are everywhere and are part of most codebases when dealing with asynchronous programming, so you might wonder what could be a solid alternative to that. Let's jump right into it.
 
@@ -316,6 +329,7 @@ In the context of explicit outcomes, `Effect` is a data type that can be used to
 
 But also Effect is:
 
+- lazy by nature
 - highly composable
 - highly type-safe
 - explicit errors and dependencies management (dependencies and `R` and discussed right after)
@@ -324,23 +338,29 @@ But also Effect is:
 - builtin retry
 - builtin resource management (acquire/release)
 
-
 The primary goal of an Effect is to act as a representation of a computation or more generally a program whose outcome (error or success) and dependencies are explicitely modeled.
 
 ## How we can improve that way of handling errors?
 
-- Either (Result-like): solution implemented natively in Rust, Kotlin, Haskell... Can be implemented in TypeScript as well
+Now that everyone is up-to-date with challenges we are facing dealing with synchronous and asynchronous (promise-based) computations, it's time to go back on our dear _explicitness_ and see how Effect solves that.
+
+To improve the way of handling errors, we can improve the way they are described, and finally make them part of the type signature as well as the value. One universal solution that you might already now is `Either` (Result-like) implemented natively in Rust, Kotlin, Haskell... Can be implemented in TypeScript as well.
 
 ```ts
-interface Either<E, A> {
-  readonly left: E;
-  readonly right: A;
+interface Either<A, B> {
+  readonly left: A;
+  readonly right: B;
 }
+```
 
+An `Either<A, B>` at its root has nothing to do with errors, it's simply a datatype that aims to represent a values with two possibilities, either "A" (left) or "B" (right). The Either type is sometimes used to represent a value which is either correct or an error; by convention, the Left constructor is used to hold an error value and the Right constructor is used to hold a correct value. This Either specialization is what most people now know as a `Result<E, A>`.
+
+```ts
 interface Result<Error, Success> extends Either<Error, Success> {}
 ```
 
 Effect integrates an `Either<E, A>` under the hood of each computation, making it both easy and explicit to deal with.
+
 
 ```ts
 type _ = Effect<R, E, A>
@@ -371,12 +391,14 @@ namespace EffectNumberGeneratorLibrary {
 
 ```
 
-If you take a close look at the `generateRandomNumber()` signature, you can see that we have the error typed as `Error`. Consequently if you describe an Effect that should not produce any known failure that is having the error channel typed as `never` (`Effect<never, never, number>`) and try to directly consume that effect, it won't compile.
+If you take a close look at the above `generateRandomNumber()` signature, you can see that we have the error typed as `Error`. Consequently if you describe an Effect that should not produce any known failure that is having the error channel typed as `never` (`Effect<never, never, number>`) and try to directly consume an effect that has a typed failure (in that case typed `Error`), it won't compile. It's great, because we are forced by the compiler to be rigorous and to deal with the error.
+
+Let's see that in action, with `multiplyNumberWithoutDealingWithError` that is not supposed to produce failures.
 
 ```ts
 function multiplyNumberWithoutDealingWithError(): Effect.Effect<
   never,
-  never, // E is typed as 'never', this Effect is not expected to produce failures (in the same way as IO<A> or Task<A>) 
+  never, // E is typed as 'never', meaning that this Effect is not expected to produce failures (in the same way as IO<A> or Task<A>). 
   number
 > {
   return EffectNumberGeneratorLibrary.generateRandomNumber();
@@ -384,7 +406,7 @@ function multiplyNumberWithoutDealingWithError(): Effect.Effect<
 }
 ```
 
-So how do we come from a description of a computation that will eventually produce a failure to a computation that does not produce failures? Dealing with errors in a recoverable fashion is pretty straightforward.
+So now that we are aware of the constraint, how do we come from a description of a computation that will eventually produce a failure to a computation that does not produce failures? Dealing with errors in a recoverable fashion is pretty straightforward.
 
 ```ts
 function multiplyNumberWhenDealingWithError(): Effect.Effect<
@@ -402,40 +424,59 @@ function multiplyNumberWhenDealingWithError(): Effect.Effect<
 ```
 
 After having described our recovery logic, the error channel is immediately being changed from `Error` to `never` meaning that `multiplyNumberWhenDealingWithError` computation can benefit from the description of a computation that won't produce expected failures. Consequently we can just deal nicely with that outcome by relying on the typings and be confident about the outcome of the computation.
- 
-Moreover, we can also model multiple failures using tagged classes
+
+In that case it's still a very simple example, but keep in mind that Effect leverages pretty well inference in a way that it can keep track and compose the error channel of dozens of chains of effects.
+
+Another benefit of having a dedicated error channel is that we can also model multiple failures using tagged unions.
+In the following example, by just using TypeScript tagged classes, we are able to make Effect infer a union of typed errors.
 
 ```ts
 
 export class NumberIsTooBigError {
   readonly _tag = "NumberIsTooBigError";
-  constructor(readonly error: string) {}
 }
 
 export class NumberIsTooSmallError {
   readonly _tag = "NumberIsTooSmallError";
-  constructor(readonly error: string) {}
 }
 
-namespace Effect2NumberGeneratorLibrary {
+namespace EffectNumberGeneratorLibrary {
   export function generateRandomNumber(): Effect<
     never,
     NumberIsTooBigError | NumberIsTooSmallError,
     number
-  > {}
+  > {
+    return pipe(
+      Effect.sync(() => Math.random()),
+      Effect.filterOrFail(
+        (randomNumber) => randomNumber > 0.9,
+        () => new NumberIsTooBigError()
+      ),
+      Effect.filterOrFail(
+        (randomNumber) => randomNumber < 0.2,
+        () => new NumberIsTooSmallError()
+      )
+    );
+  }
 }
 ```
 
-Then it's easy to deal with failures represented as a union, because we can pattern match and recover from either specific failures or all failures. Depending on that choice, pattern matched failures will be erased from the error channel and other ones will just remain until some recovery logic is defined at some point. 
+Note: there might be some cases where TypeScript isn't able to unify union types properly, but thankfully using Effect combinators (here: `filterOrFail`) we are able to bypass these limitations.
+
+I'm not going to dive into this subject there, but you can read more either in the [01-explicitness.ts](https://github.com/antoine-coulon/effect-introduction/blob/main/src/01-explicitness.ts) section or in the [following Discord thread](https://discord.com/channels/795981131316985866/1115294739382669312).
+
+
+Now that we have failures represented as a union, it allows us to pattern match and recover from either specific failures or all failures. Depending on that choice, pattern matched failures will be erased from the error channel and other ones will just remain until some recovery logic is defined at some point. 
 
 ```ts
 
-function multiplyNumberWhenDealingWithErrors(): Effect<never, never, number> {
+function multiplyNumberWithExhaustivePatternMatching(): Effect<never, never, number> {
+  // Note how the error channel becomes "never" now that we exhaustive pattern match                                           
   return pipe(
-    Effect2NumberGeneratorLibrary.generateRandomNumber(),
+    EffectNumberGeneratorLibrary.generateRandomNumber(),
     // If there is no failure
     Effect.flatMap((number) => Effect.succeed(number * 2)),
-    // If there are failures, pattern match 
+    // If there are failures, pattern match.
     Effect.catchTags({
       NumberIsTooBigError: () => Effect.succeed(0),
       NumberIsTooSmallError: () => Effect.succeed(1),
@@ -444,8 +485,36 @@ function multiplyNumberWhenDealingWithErrors(): Effect<never, never, number> {
 }
 
 ```
+
+In the above case the pattern matching is exhaustive, but if it's not the case, the members of the union not being covered by the matching will be still reflected in the error channel.
+
+```ts
+
+function multiplyNumberWithPartialPatternMatching(): Effect.Effect<
+  never,
+  NumberIsTooBigError,
+  // ^ partial pattern matching does not erase all errors
+  number
+> {
+  return pipe(
+    Effect2NumberGeneratorLibrary.generateRandomNumber(),
+    Effect.flatMap((number) => Effect.succeed(number * 2)),
+    Effect.catchTags({
+      NumberIsTooSmallError: () => Effect.succeed(1),
+    })
+  );
+}
+
+```
  
 **Explicit dependencies**
+
+<p align="left">
+    <a href="https://github.com/antoine-coulon/effect-introduction/blob/main/src/01-explicitness.ts" target="_blank">
+      <img src="https://skillicons.dev/icons?i=ts" width="25" />
+      Go to source file, section "Explicit dependencies" (01-explicitness.ts)
+     </a>
+</p>
 
 Effect can embed contextual information in the same way as the `Reader` data type from `fp-ts` was describing it.
 
@@ -477,14 +546,26 @@ function registerUser(): Effect.Effect<UserRepository, UserAlreadyExistsError, C
 
 ```
 
-What it means is that `registerUser` needs an instance of some service that implements the interface `UserRepository`. Otherwise, the program does not compile:
+What it means is that `registerUser` needs an instance of some service that implements the interface `UserRepository`. Until the requirements are satisfied, the program won't compile:
 
 ```ts
 const mainProgram = Effect.runPromise(registerUser());
       // ^ Type 'UserRepository' is not assignable to type 'never': ts(2345)
 ```
 
-We **can't compile the program because we didn't satisfy the dependencies**. One other benefit of having explicit dependencies is that conceptually the requirements are very clear and dependencies are not hidden/implicit. 
+We **can't compile the program because we didn't satisfy the dependencies**. 
+
+How does it work? Theorically speaking, it's simple. The runtime interpreter checks that the Effect we're trying to run has all the dependencies satisfied. Statically at the type-level, we're able to determine that by checking
+the `R` type parameter of the Effect. If the `R` type parameter is `never`, it means that all dependencies of the Effect are satisfied. Otherwise, it means that some dependencies are missing (the ones still visible in the `R` type).
+
+```ts
+const _program = useCases.registerUser();
+//    ^ The type here is Effect<UserRepository, UserAlreadyExistsError, CreatedUser>
+```
+
+Because the `R` still has `UserRepository`, it means that the dependency needs to be provided in order for the effect to be run.
+
+One benefit of having explicit dependencies is that conceptually the requirements are very clear and dependencies are not hidden/implicit. 
 Dependencies appearing in the `R` generic type parameter is only refering to interfaces not any real implementations, this has for consequence to let room for the **Dependency Inversion Principle to easily spread everywhere in a effortless way**.
 
 This example shows the use of one dependency, but it's important to note that Effect is able to **deeply infer the dependencies required as a TypeScript Union type**, wherever the dependencies come from in the Effect tree:
@@ -513,17 +594,18 @@ If you're interested in the story behind the representation of the dependencies 
 Just before, we mentioned the fact that until a required dependency is satisfied, the program won't compile. Effect provides us a type-safe dependency injection mechanism helping us satisfy the dependency graph.
 
 ```ts
-Effect.runPromise(
-  pipe(
-    registerUser(),
-    // Dependency injection
-    Effect.provideService(UserRepository, {
-      createUser: () =>
-        // We don't care about the implementation, it could be anything.
-        // Here we just satisfy the interface by producing the expected failure
-        Effect.fail(new UserAlreadyExistsError("User already exists")),
-    })
-  )
+
+pipe(
+  registerUser(),
+  // Dependency injection
+  Effect.provideService(UserRepository, {
+    createUser: () =>
+      // We don't care about the implementation, it could be anything, as soon
+      // as it implements the interface contract.
+      // Here we just satisfy the interface by producing the expected failure
+      Effect.fail(new UserAlreadyExistsError("User already exists")),
+  }),
+  Effect.runPromise
 );
 ```
 

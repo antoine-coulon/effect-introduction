@@ -1,5 +1,4 @@
 /**
- * (WIP)
  *
  * --------------------
  * 01-explicitness.ts
@@ -67,7 +66,7 @@ function defensiveMultiplyNumber() {
 }
 
 /**
- * Other solution is dealing with errors the hard way. As you might know, JavaScript
+ * Another solution is dealing with errors the hard way. As you might know, JavaScript
  * errors are not typed, so we can't really know what kind of error we are dealing
  * with. The only thing we can do is introspect the Error object and try to
  * identify the error by some of its properties.
@@ -306,6 +305,13 @@ const backofficeService = {
  * that context is anything that satisfies the requirements of the computation.
  */
 
+/**
+ * Let's bring the Promise digression to an end.
+ * Now that everyone is up-to-date with challenges we are facing dealing with synchronous
+ * and asynchronous (promise-based) computations, it's time to go back on our dear
+ * explicitness and see how Effect solves that.
+ */
+
 import { pipe } from "@effect/data/Function";
 import * as Effect from "@effect/io/Effect";
 
@@ -324,6 +330,17 @@ namespace EffectNumberGeneratorLibrary {
   }
 }
 
+/**
+ * In the following function, see how we write the return type of the function as
+ * an Effect that can't fail with an expected error (modeled by the `never` type
+ * in the second type parameter). However, because we actually have to deal with
+ * the error coming from "generateRandomNumber", we are forced to manage the error
+ * otherwise the code does not compile (c.f. "@ts-expect-error" directive)
+ *
+ * Because an Effect describes explicitely the error channel, we can benefit from
+ * the inference wherever we actually use that Effect. This is a good thing because
+ * it means that we are forced to deal with the error.
+ */
 function multiplyNumberWithoutDealingWithError(): Effect.Effect<
   never,
   never,
@@ -342,34 +359,125 @@ function multiplyNumberWhenDealingWithError(): Effect.Effect<
   return pipe(
     EffectNumberGeneratorLibrary.generateRandomNumber(),
     Effect.flatMap((number) => Effect.succeed(number * 2)),
+    // Recover from the error, and produce a successful value instead
     Effect.catchAll(() => Effect.succeed(0))
   );
 }
 
-// Multiple errors
+/**
+ * Another benefit of having a dedicated error channel is that we can also model
+ * multiple failures using tagged unions, in that case it's simply TypeScript tagged
+ * classes.
+ */
 
 export class NumberIsTooBigError {
   readonly _tag = "NumberIsTooBigError";
-  constructor(readonly error: string) {}
 }
 
 export class NumberIsTooSmallError {
   readonly _tag = "NumberIsTooSmallError";
-  constructor(readonly error: string) {}
 }
 
 namespace Effect2NumberGeneratorLibrary {
-  // @ts-ignore - ignore impl
   export function generateRandomNumber(): Effect.Effect<
     never,
     NumberIsTooBigError | NumberIsTooSmallError,
     number
-  > {}
+  > {
+    return pipe(
+      Effect.sync(() => Math.random()),
+      Effect.filterOrFail(
+        (randomNumber) => randomNumber > 0.9,
+        () => new NumberIsTooBigError()
+      ),
+      Effect.filterOrFail(
+        (randomNumber) => randomNumber < 0.2,
+        () => new NumberIsTooSmallError()
+      )
+    );
+  }
 }
 
-function multiplyNumberWhenDealingWithErrors(): Effect.Effect<
+/**
+ * Note that here we are not using if/else statements because TypeScript would not
+ * be able to unify the union of errors properly.
+ *
+ * What we are trying to achieve is unifying three types of Effects:
+ *
+ * 1. `Effect<never, NumberIsTooBigError, never>` (first Effect.fail)
+ * 2. `Effect<never, NumberIsTooSmallError, never>` (second Effect.fail)
+ * 3. `Effect<never, never, number>` (Effect.succeed)
+ *
+ * What we want is the type just below:
+ * `Effect<never, NumberIsTooBigError | NumberIsTooSmallError, number>`
+ */
+
+namespace EffectNumberGeneratorLibraryWithUnificationProblem {
+  export function generateRandomNumber(): Effect.Effect<
+    never,
+    NumberIsTooBigError | NumberIsTooSmallError,
+    number
+  > {
+    return Effect.flatMap(
+      Effect.sync(() => Math.random()),
+      // @ts-expect-error - TypeScript can't unify the union of errors properly
+      (randomNumber) => {
+        if (randomNumber > 0.9) {
+          return Effect.fail(new NumberIsTooBigError());
+        }
+
+        if (randomNumber < 0.2) {
+          return Effect.fail(new NumberIsTooSmallError());
+        }
+
+        return Effect.succeed(randomNumber);
+      }
+    );
+  }
+}
+
+/**
+ * Thankfully, to bypass this issue, we can use Effect combinators that manage
+ * unification properly (Effect.filterOrFail in the working case above). We can
+ * also use the "unify" function from @effect/data.
+ */
+
+import { unify } from "@effect/data/Unify";
+
+namespace EffectNumberGeneratorLibraryWithCleanUnification {
+  export function generateRandomNumber(): Effect.Effect<
+    never,
+    NumberIsTooBigError | NumberIsTooSmallError,
+    number
+  > {
+    return Effect.flatMap(
+      Effect.sync(() => Math.random()),
+      unify((randomNumber) => {
+        if (randomNumber > 0.9) {
+          return Effect.fail(new NumberIsTooBigError());
+        }
+
+        if (randomNumber < 0.2) {
+          return Effect.fail(new NumberIsTooSmallError());
+        }
+
+        return Effect.succeed(randomNumber);
+      })
+    );
+  }
+}
+
+/**
+ * Now that we have failures represented as a union, it allows us to pattern match
+ * and recover from either specific failures or all failures. Depending on that
+ * choice, pattern matched failures will be erased from the error channel and other
+ * ones will just remain until some recovery logic is defined at some point.
+ */
+
+function multiplyNumberWithExhaustivePatternMatching(): Effect.Effect<
   never,
   never,
+  // ^ exhaustive pattern matching erases all errors are we all handle them
   number
 > {
   return pipe(
@@ -382,15 +490,37 @@ function multiplyNumberWhenDealingWithErrors(): Effect.Effect<
   );
 }
 
+function multiplyNumberWithPartialPatternMatching(): Effect.Effect<
+  never,
+  NumberIsTooBigError,
+  // ^ partial pattern matching does not erase all errors
+  number
+> {
+  return pipe(
+    Effect2NumberGeneratorLibrary.generateRandomNumber(),
+    Effect.flatMap((number) => Effect.succeed(number * 2)),
+    Effect.catchTags({
+      NumberIsTooSmallError: () => Effect.succeed(1),
+    })
+  );
+}
+
 /**
- * --------------------
- * 2. DEPENDENCIES
- * --------------------
+ * ---------------------
+ * Explicit dependencies
+ * ---------------------
+ *
+ * One thing that is often under-estimated is the importance of making the dependencies
+ * of a program explicit. It has many benefits, two of them are:
+ * - being aware about the requirements of a program and fight hidden dependencies,
+ *   which is often related to tight and unwanted coupling
+ * - being able to build dependency injection systems around it and enforce the
+ *   respect of the requirements at the type-level. This is super useful for
+ *   testing and faking dependencies etc
  */
 
 class UserAlreadyExistsError {
   readonly _tag = "  UserAlreadyExistsError";
-  constructor(readonly error: string) {}
 }
 
 class CreatedUser {}
@@ -410,23 +540,64 @@ const useCases = {
     CreatedUser
   > {
     return pipe(
+      /**
+       * Here, we are requesting an access to the dependency. This has for consequence
+       * to add the type of the requested dependency in the Effect where it is used,
+       * but also all the Effects that will be composed with it (in the same way it
+       * works for Errors and Successes <E, A>).
+       * It's important to note that the dependency is requested through the Context Tag
+       * and does not refer to a concrete implementation. Later in time, we'll be
+       * able to provide an implementation of our choice for that specific Tag.
+       */
       UserRepository,
       Effect.flatMap((userService) => userService.createUser())
     );
   },
 };
 
-Effect.runPromise(
+/**
+ * When running the program, we need to provide an implementation for the dependency
+ * used by `registerUser`. Otherwise, the program won't compile.
+ * You can remove the `@ts-expect-error` directive to see the error.
+ */
+// @ts-expect-error - no implementation provided for the dependency
+Effect.runPromise(useCases.registerUser());
+
+/**
+ * How does it work? Theorically speaking, it's very simple. The runtime interpreter
+ * checks that the Effect we're trying to run has all the dependencies it needs.
+ * Statically at the type-level, we're able to determine that by checking
+ * the `R` type parameter of the Effect. If the `R` type parameter is "never", it
+ * means that all dependencies of the Effect are satisfied. Otherwise, it means
+ * that some dependencies are missing (the ones still visible in the `R` type).
+ */
+
+const _ = useCases.registerUser();
+//    ^ The type of the program is Effect<UserRepository, UserAlreadyExistsError, CreatedUser>
+
+/**
+ * ------------------------------
+ * Type-safe dependency injection
+ * ------------------------------
+ *
+ * If we now want to run the Effect, what we need to do is satisfying the dependency
+ * that we're missing. We can do that by providing an implementation matching the
+ * expected interface for the dependency and then running the Effect.
+ */
+const userProgram = () =>
   pipe(
     useCases.registerUser(),
     Effect.provideService(UserRepository, {
-      createUser: () =>
-        Effect.fail(new UserAlreadyExistsError("User already exists")),
-    })
-  )
-);
+      createUser: () => Effect.fail(new UserAlreadyExistsError()),
+    }),
+    Effect.runPromise
+  );
 
-// Dependencies are propagated as a typed union
+/**
+ * Exactly in the same fashion as for errors, dependencies are propagated as a
+ * typed union. We can see that in action by introducing an effect requesting
+ * two dependencies.
+ */
 
 interface DependencyA {
   _tag: "DependencyA";
@@ -457,3 +628,54 @@ const program = Effect.gen(function* ($) {
 
   return result1 + result2;
 });
+
+/**
+ * If we want to run the program, we need to provide implementations for both
+ * dependencies.
+ */
+const mainProgram = () =>
+  pipe(
+    program,
+    Effect.provideService(DependencyA, { _tag: "DependencyA" }),
+    Effect.provideService(DependencyB, { _tag: "DependencyB" }),
+    Effect.runPromise
+  );
+
+/**
+ * What's great about dependency injection with Effect is that it's completely
+ * type-safe but also effectful. It means that we can provide effects building
+ * implementations that are themselves effectful and that will be provided only
+ * when the program will be run.
+ *
+ * In the example below, the implementation of the dependency depends on an asynchronous
+ * operation. Effect will safely run the dependency construction and only then
+ * will execute the effect relying on it.
+ */
+
+interface FeatureFlag {
+  isEnabled: (moduleId: number) => Effect.Effect<never, never, boolean>;
+}
+
+const FeatureFlag = Context.Tag<FeatureFlag>();
+
+const mainFeatureFlagProgram = () =>
+  pipe(
+    FeatureFlag,
+    Effect.flatMap(({ isEnabled }) => isEnabled(250)),
+    Effect.provideServiceEffect(
+      FeatureFlag,
+      pipe(
+        Effect.promise(() => fetch("/feature-flags/250")),
+        Effect.map(({ body }) => ({
+          isEnabled: () =>
+            Effect.succeed((body as any).isEnabled ? true : false),
+        })),
+        Effect.catchAll(() =>
+          Effect.succeed({
+            isEnabled: () => Effect.succeed(false),
+          })
+        )
+      )
+    ),
+    Effect.runPromise
+  );

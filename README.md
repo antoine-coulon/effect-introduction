@@ -654,6 +654,13 @@ As part of the introduction, this `Layer` section ends up there. If you want to 
 
 ## 2. Testing
 
+<p align="left">
+    <a href="https://github.com/antoine-coulon/effect-introduction/blob/main/src/02-testing.ts" target="_blank">
+      <img src="https://skillicons.dev/icons?i=ts" width="25" />
+      Go to source file (02-testing.ts)
+     </a>
+</p>
+
 Testing is the ability of asserting that a system behaves as expected. As obvious as it may seem, testing can be very tricky if the program is coupled to implementation details and has implicit (hidden dependencies) that we can't control.
 
 Thankfully, Effect is explicit towards dependencies and favors the use of the Dependency Inversion Principle (DIP) by forcing each computation to depend on an abstraction (interface) rather than on an implementation. 
@@ -699,6 +706,8 @@ it("Should do something", async () => {
 });
 
 ```
+
+As we can see, testing is very easy with Effect and it was thought from the ground up to allow an effect description to be decoupled from its implementation details.
 
 Note that this is also beneficial for many other use cases other than testing, for instance changing very easily implementations of a service without breaking code depending on the contract.
 

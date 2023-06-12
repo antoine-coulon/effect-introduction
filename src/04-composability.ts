@@ -1,42 +1,77 @@
-/** WIP */
-
 import * as Effect from "@effect/io/Effect";
+import * as Layer from "@effect/io/Layer";
 import * as Context from "@effect/data/Context";
 import { pipe } from "@effect/data/Function";
+import * as S from "@effect/schema/Schema";
 import * as Duration from "@effect/data/Duration";
 import * as Schedule from "@effect/io/Schedule";
 
-async function fetchData() {
-  return fetch("https://jsonplaceholder.typicode.com/todos/1");
-}
+const Todo = S.struct({
+  id: S.number,
+  completed: S.boolean,
+});
+
+type Todo = S.To<typeof Todo>;
 
 class FetchError {
   readonly _tag = "FetchError";
+  constructor(readonly id: number) {}
 }
 
-class Todo {}
+class DecodeError {
+  readonly _tag = "DecodeError";
+  constructor(readonly id: number) {}
+}
 
 interface TodosRepository {
-  fetchTodo: (id: number) => Effect.Effect<TodosRepository, FetchError, Todo>;
+  fetchTodo: (
+    id: number
+  ) => Effect.Effect<TodosRepository, FetchError | DecodeError, Todo>;
 }
 
 const TodosRepository = Context.Tag<TodosRepository>();
 
-pipe(
-  TodosRepository,
-  Effect.flatMap((todosRepository) =>
+const TodosRepositoryLive = Layer.succeed(TodosRepository, {
+  fetchTodo: (id) =>
     pipe(
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-      Effect.forEachPar(todosRepository.fetchTodo),
-      Effect.withParallelism(5)
-    )
-  ),
-  Effect.retry(
-    pipe(
-      Schedule.exponential(Duration.seconds(1), 0.5),
-      Schedule.whileOutput((duration) => duration < Duration.seconds(30))
-    )
-  ),
-  Effect.mapError(() => new FetchError()),
-  Effect.fork
-);
+      Effect.tryCatchPromise(
+        () =>
+          fetch(`https://jsonplaceholder.typicode.com/todos/${id}`).then(
+            (response) => response.json()
+          ),
+        () => new FetchError(id)
+      ),
+      Effect.flatMap(S.parseEffect(Todo)),
+      Effect.mapError(() => new DecodeError(id))
+    ),
+});
+
+const program = (ids: number[]) => {
+  const schedulePolicy = pipe(
+    Schedule.exponential(Duration.seconds(1), 0.5),
+    Schedule.compose(Schedule.elapsed()),
+    Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(5)))
+  );
+
+  return pipe(
+    TodosRepository,
+    Effect.flatMap((repository) =>
+      pipe(
+        ids,
+        Effect.forEachPar((id) =>
+          pipe(repository.fetchTodo(id), Effect.retry(schedulePolicy))
+        ),
+        Effect.withParallelism(5)
+      )
+    ),
+    Effect.tapError(({ id }) => Effect.logError(`Error fetching ${id}`)),
+    Effect.provideLayer(TodosRepositoryLive),
+    Effect.runPromise
+  );
+};
+
+// run the program with a list of valid ids
+// program([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).then(console.log).catch(console.error);
+
+// run the program with one invalid id "100000"
+// program([1, 2, 3, 4, 5, 6, 7, 8, 9, 100000]).then(console.log).catch(console.error);

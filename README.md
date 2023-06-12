@@ -1061,29 +1061,94 @@ Note: more interrupt examples are available in the `src/03-resilience.ts` TypeSc
 
 The art of having a set of reusable software components that can be easily combined, extended, specialized and in a scalable, maintainable and understable way. 
 
-Effect `does exactly that`. Thanks to all its primitives and very rich standard library, it allows us to model everything we need on a daily basis. 
+Effect `does exactly that`. Thanks to all its primitives and very rich standard library, it allows us to model everything we need on a daily basis.
+
+Hopefully at this point you already read everything before that, do I still need to justify the fact that Effect leverages incredibly well composability? :yawning_face:
 
 ```ts
-pipe(
+const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const schedulePolicy = pipe(
+  Schedule.exponential(Duration.seconds(1), 0.5),
+  Schedule.compose(Schedule.elapsed()),
+  Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(5)))
+);
+
+const listTodos = pipe(
   TodosRepository,
   Effect.flatMap((todosRepository) =>
     pipe(
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-      Effect.forEachPar(todosRepository.fetchTodo),
+      ids,
+      Effect.forEachPar((id) =>
+        pipe(todosRepository.fetchTodo(id), Effect.retry(schedulePolicy))
+      ),
       Effect.withParallelism(5)
     )
   ),
-  Effect.retry(
-    pipe(
-      Schedule.exponential(Duration.seconds(1), 0.5),
-      Schedule.whileOutput((duration) => duration < Duration.seconds(30))
-    )
-  ),
-  Effect.mapError(() => new FetchError())
+  Effect.tapError(({ id }) => Effect.logError(`Error fetching ${id}`))
 );
 ```
 
+This little example takes just a bit more than 20 lines of code but it combines:
 
+- requesting access to the `TodosRepository`
+- using that repository to combine a set of 10 operations bounded by a limit of 5 simultaneous operations
+- each operation uses a retry schedule with exponential backoff in case of failure, bounded by a maximum period of 5 seconds after what the retry stops
+
+What's great is that the same composition principles smoothly apply on all modules because Effect implements the hard Functional Programming laws under the hood for us. Effect provides us a very rich set of building blocks that we can compose as much as we want, we can reduce or increase abstractions as we want, without having to generalize at the cost of a maintenance burden. See how much I was able to define a specific schedule without having to write any piece of that logic myself. I'm just composing Schedule blocks, providing that in a computation context.
+
+For instance, the [@effect/schema](https://github.com/Effect-TS/schema) library created by [Giulio Canti](https://github.com/gcanti) integrates super nicely, let's take a look at a simple `TodosRepository` implementation:
+
+```ts
+import * as Effect from "@effect/io/Effect";
+import * as Layer from "@effect/io/Layer";
+import * as Context from "@effect/data/Context";
+import { pipe } from "@effect/data/Function";
+import * as S from "@effect/schema/Schema";
+
+const Todo = S.struct({
+  id: S.number,
+  completed: S.boolean,
+});
+
+type Todo = S.To<typeof Todo>;
+
+class FetchError {
+  readonly _tag = "FetchError";
+  constructor(readonly id: number) {}
+}
+
+class DecodeError {
+  readonly _tag = "DecodeError";
+  constructor(readonly id: number) {}
+}
+
+interface TodosRepository {
+  fetchTodo: (id: number) => Effect.Effect<TodosRepository, FetchError, Todo>;
+}
+
+const TodosRepository = Context.Tag<TodosRepository>();
+
+const TodosRepositoryLive = Layer.succeed(TodosRepository, {
+  fetchTodo: (id) =>
+    pipe(
+      Effect.tryCatchPromise(
+        () =>
+          fetch(`https://jsonplaceholder.typicode.com/todos/${id}`).then(
+            (response) => response.json()
+          ),
+        () => new FetchError(id)
+      ),
+      Effect.flatMap(S.parseEffect(Todo)),
+      Effect.mapError(() => new DecodeError(id))
+    ),
+});
+```
+
+See how everything integrates well including async operation, schema validation, multiple error mapping in 10 explicit lines of code.
+
+Note also that Effect code can be written with various styles. In most examples here, I'm using the pipeable API, but at some places I'm also using the dual API and the imperative-like syntax with Generators. And you know what? You can even combine these three styles combined altogether (I'll let you settle if it's a good practice on your own).
+  
 ## 5. Concurrency
 
 Concurrency is the art of running multiple computations cooperatively to improve the overall speed of the program execution.

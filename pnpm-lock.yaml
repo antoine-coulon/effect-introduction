@@ -7,6 +7,9 @@ dependencies:
   '@effect/io':
     specifier: 0.26.0
     version: 0.26.0
+  '@effect/schema':
+    specifier: ^0.20.1
+    version: 0.20.1
   tsx:
     specifier: ^3.12.7
     version: 3.12.7
@@ -29,6 +32,14 @@ packages:
     resolution: {integrity: sha512-umwZ/sRoV7zb/8WwoiK7xWoypqvY6C1EXWEGORpViAFUTx3/bXc9i7JtdttTWVokXb3qogrxGX2SHopB20I4vQ==}
     dependencies:
       '@effect/data': 0.12.5
+    dev: false
+
+  /@effect/schema@0.20.1:
+    resolution: {integrity: sha512-wp3qYMIC/NyVbUhJ7W52JQcPN56AsagTYJsXVmYyK24QEtTuEGbVqCelihY8RwjJZLPEt230bqssFb2+Q/EsHQ==}
+    dependencies:
+      '@effect/data': 0.12.5
+      '@effect/io': 0.26.0
+      fast-check: 3.10.0
     dev: false
 
   /@esbuild-kit/cjs-loader@2.4.2:
@@ -288,6 +299,13 @@ packages:
       '@esbuild/win32-x64': 0.17.19
     dev: false
 
+  /fast-check@3.10.0:
+    resolution: {integrity: sha512-I2FldZwnCbcY6iL+H0rp9m4D+O3PotuFu9FasWjMCzUedYHMP89/37JbSt6/n7Yq/IZmJDW0B2h30sPYdzrfzw==}
+    engines: {node: '>=8.0.0'}
+    dependencies:
+      pure-rand: 6.0.2
+    dev: false
+
   /fsevents@2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -300,6 +318,10 @@ packages:
     resolution: {integrity: sha512-lgbo68hHTQnFddybKbbs/RDRJnJT5YyGy2kQzVwbq+g67X73i+5MVTval34QxGkOe9X5Ujf1UYpCaphLyltjEg==}
     dependencies:
       resolve-pkg-maps: 1.0.0
+    dev: false
+
+  /pure-rand@6.0.2:
+    resolution: {integrity: sha512-6Yg0ekpKICSjPswYOuC5sku/TSWaRYlA0qsXqJgM/d/4pLPHPuTxK7Nbf7jFKzAeedUhR8C7K9Uv63FBsSo8xQ==}
     dev: false
 
   /resolve-pkg-maps@1.0.0:

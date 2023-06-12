@@ -254,7 +254,7 @@ By default, Promises don't have much combinators to work with nor Promise constr
   
 - **No builtin interruption model.**
 
-Following what was said just before, Promises unfortunately don't have a built-in interruption model. There was one attempt to [introduce cancelation to Promises that was withdrawn](https://github.com/tc39/proposal-cancelable-promises) for some [unclear reasons](https://github.com/tc39/proposal-cancelable-promises/issues/70). My 2 cents is that it was because adding cancelation into Promises would have introduced too many changes, and the initial design constrained the evolution of the builtin features around Promises.
+Following what was said just before, Promises unfortunately don't have a built-in interruption model. There was one attempt to [introduce cancellation to Promises that was withdrawn](https://github.com/tc39/proposal-cancelable-promises) for some [unclear reasons](https://github.com/tc39/proposal-cancelable-promises/issues/70). My 2 cents is that it was because adding cancellation into Promises would have introduced too many changes, and the initial design constrained the evolution of the builtin features around Promises.
 
 In any case as of now, we are not able to cancel a Promise using the standard API.
 
@@ -713,19 +713,28 @@ Note that this is also beneficial for many other use cases other than testing, f
 
 ## 3. Resilience
 
-Resilience is the art of being resilient of failures that is being able to handle efficiently and recover from all types of errors.
+<p align="left">
+    <a href="https://github.com/antoine-coulon/effect-introduction/blob/main/src/03-resilience.ts" target="_blank">
+      <img src="https://skillicons.dev/icons?i=ts" width="25" />
+      Go to source file (03-resilience.ts)
+     </a>
+</p>
 
-We saw that explicitness and type-safety offered by Effect allows us to erase a whole set of bugs and cleanly deal with errors. 
+Resilience is the art of designing and implementing software systems that can gracefully and efficiently recover from most types of failures.
+
+We saw that explicitness and type-safety offered by Effect allow us to erase a whole set of bugs and cleanly deal with errors. 
 
 `If it compiles, it works` - slogan in the making. I can confirm that from my Effect experience since one year and a half.
 
-Effect is a very powerful datatype, with a deep inference mechanism making Effect programs highly type-safe. It brings the type-safety to a whole new level by using TypeScript in a excellent way.
+Consequently, Effect is a very powerful datatype, with a deep inference mechanism making Effect programs highly type-safe. It brings the type-safety to a whole new level by using TypeScript in a excellent way.
 
-As we saw from the "Explicitness" part, Effect forces us to deal with errors case and forces us to describe computations that are both mathematically correct and make sense from a computer science perspective.
+As we saw from the [**Explicitness**](#1-explicitness) part, Effect forces us to deal with errors case and forces us to describe computations that are both mathematically correct and make sense from a computer science perspective.
 
-But most of the time, we don't only want to catch error, we also want to retry with some specific logic or any other specific behavior.
+But most of the time, we don't only want to catch error, we also want to retry with some custom policy, that mostly depend on the system we are targeting and its own constraints.
 
-Using raw TypeScript, we know how to deal with an error happening, but how can we simply retry with some business rules?
+Using vanilla TypeScript, we know and saw before how to deal with an error happening, but how can we simply write a retry mechanism for a given computation?
+
+Let's start by writing a dummy use case which is unluckily always failing. Then, we can start writing a little `retry` function that is able to retry the computation X times, nothing fancy there.
 
 ```ts
 async function businessUseCase() {
@@ -747,16 +756,16 @@ retry(businessUseCase, 5);
 ```
 
 
-Great! But now, retry X times but on a specific condition 
+Great, we are able to retry the computation as many times as we want! But what if we want to retry both X times but also on a specific condition?
 
 
 ```ts
 async function businessUseCase() {
   const random = Math.random();
   if (random > 0.9) {
-    throw new Error("error1");
+    throw new Error("error_1");
   }
-  throw new Error("error2");
+  throw new Error("error_2");
 }
 
 async function retry(
@@ -777,21 +786,23 @@ async function retry(
 retry(
   businessUseCase,
   5,
-  (error) => error instanceof Error && error.message === "error2"
+  (error) => error instanceof Error && error.message === "error_2"
 )
 ```
 
+As we can see, the complexity grows very quickly for simple cases. In most real-world scenarios, we would want to add time delays between retries, bound the retrying with a maximum duration, etc. Writing it all in that fashion would be very tedious and error-prone.
 
-As we can see, the complexity grows very quickly for simple cases. As the `retry` function gets more specific, we:
+If we want to combine multiple rules, that is adding a specific debounce of exponential backoff, this would become nearly unmaintainable. 
+
+Consequently as the `retry` function gets more specific, we:
 - lose flexibility
 - lose composability 
 - lose the ability of having an error specialization
 - increase the complexity
   
-If we want to combine multiple rules, that is adding a specific debounce of exponential backoff, this would become nearly unmaintainable.
+Thankfully, Effect also comes in with a rich set of builtin ways to deal with retry policies, allowing us to combine a lot of different and human readable strategies.
 
-
-Thankfully, Effect also comes in with a rich set of builtin ways to deal with `retries`.
+Let's rewrite the code examples with Effect.
 
 ```ts
 import * as Effect from "@effect/io/Effect";
@@ -799,25 +810,27 @@ import { pipe } from "@effect/data/Function";
 import * as Duration from "@effect/data/Duration";
 import * as Schedule from "@effect/io/Schedule";
 
-pipe(Effect.fail(new Error("Some error")), Effect.retryN(5));
-
-pipe(
-  Effect.fail(
-    Math.random() > 0.5
-      ? new Error("Some error")
-      : new Error("Some other error")
-  ),
-  Effect.retryUntil((error) => error.message !== "Some error")
+const computationWithFiveRetries = pipe(
+  Effect.fail(new Error("Some error")),
+  // Number of retries
+  Effect.retryN(5)
 );
 
-pipe(
-  Effect.fail(new Error("Some error")),
-  Effect.retry(Schedule.exponential(Duration.seconds(1), 0.5))
+const computationWithRetryUntil = pipe(
+  Effect.sync(() => Math.random()),
+  Effect.flatMap((random) =>
+    Effect.fail(
+      random > 0.5 ? new Error("Forbidden") : new Error("Unauthorized")
+    )
+  ),
+  // Retry until the condition is met
+  Effect.retryUntil((error) => error.message !== "Forbidden")
 );
 ```
  
-
-And even more complex ones
+And even more complex ones, combining multiple policies to create one composed policy that:
+- Always recurs, but will wait a certain amount between repetitions using exponential backoff, up until the point where repetitions are bounded to 1 second 
+- Recurs while the time elapsed during the whole policy is less than or equal to 30 seconds
 
 ```ts
 import { pipe } from "@effect/data/Function";
@@ -826,30 +839,223 @@ import * as Schedule from "@effect/io/Schedule";
 
 export const retrySchedule = pipe(
   Schedule.exponential(Duration.millis(10), 2.0),
-  Schedule.either(Schedule.spaced(() => Duration.seconds(1))),
-  Schedule.compose(Schedule.elapsed),
-  Schedule.whileOutput(Duration.lowerThenOrEqual(Duration.seconds(30)))
+  Schedule.either(Schedule.spaced(Duration.seconds(1))),
+  Schedule.compose(Schedule.elapsed()),
+  Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(30)))
 );
 ```
 
+We are able to describe a complex retry policy in few lines of code, in a very explicit, elegant and composable way.
 
-Still in the context of **Resilience**, Effect also allows to model interruptions and deal with the cases where some computation gets interrupted. It allows us to model an acquire/release logic that is safe towards interruption and prevent memory leaks.
+Note: one more example is available in the associated TypeScript file (`src/03-resilience.ts`).
+
+**Interruption**
+
+Still in the context of **Resilience**, Effect also allows to deal with interruptions thanks to its concurrency model based on **Fibers**. 
+
+I'm not going to expand on what Fibers are in this section because it will be done in the [**Concurrency**](#5-concurrency) section, but very briefly a Fiber is a lightweight concurrency primitive able to run computations in a type-safe, composable and resource-safe way. Fibers are said resource-safe, meaning that they allow us to model **safe resource acquisition and release** in case of interruptions, avoiding memory leaks and letting room for many graceful shutdown/clean up mechanisms.
+
+Being able to interrupt computations is a very common pattern, let's take for instance `Promise.race`:
+
+```ts
+import { setTimeout } from "node:timers/promises";
+
+Promise.race([
+  setTimeout(1000),
+  setTimeout(10000),
+]);
+```
+
+You might use `Promise.race` as a convenient way to schedule two asynchronous tasks with the objective of cancelling the loser after the winner settled. Conceptually, racing is a great way of achieving that, the problem being that both computations will be settled letting you think that we are fully done with the tasks, but the truth is that the loser will indeed keep running in the background, without being properly released. 
+
+One better way of doing that would be to use the `AbortController` Web API:
+
+```ts
+import { setTimeout } from "node:timers/promises";
+
+function makeRace() {
+  const abortController1 = new AbortController();
+  const abortController2 = new AbortController();
+
+  async function cancellableTimeout1() {
+    await setTimeout(1000, undefined, { signal: abortController1.signal });
+    console.log("Aborting timeout 2");
+    abortController2.abort();
+  }
+
+  async function cancellableTimeout2() {
+    await setTimeout(10000, undefined, { signal: abortController2.signal });
+    console.log("Aborting timeout 1");
+    abortController1.abort();
+  }
+
+  return Promise.race([cancellableTimeout1(), cancellableTimeout2()]);
+}
+```
+
+In that case, the Abort Controller API provide us a way to ask some asynchronous computation to abort its current execution. One drawback of this approach is that it can be very tedious to implement correctly and the control flow becomes very quickly error-prone. Implementing support for the API can even become leaky itself, we'll see that just after our new example.
+
+Let's take a new example of a simple job running in the background, using a `setInterval` processing literally nothing. 
+
+For that we are going to use API that everyone is most likely used to (`setInterval`), that acquires a resource (a timer) and needs to release it at some point (`clearInterval`) when we finished processing the job after 10 seconds.
+
+```ts
+import { setTimeout } from "node:timers/promises";
+
+async function backgroundJob() {
+  const processTime = 10_000;
+  const interval = setInterval(() => {
+    console.log("process something...");
+  }, 500);
+
+  try { 
+    await setTimeout(processTime);
+  } finally {
+    clearInterval(interval);
+  }
+}
+```
+
+Internally, we are able to use the classic `try/finally` control flow allowing to model the `use` and `release` actions. Let's see how we are able to cancel the job in itself from the outside world, that is being able to cancel at any point in time the `setInterval`.
+
+It becomes a bit more tricky when trying to implement support for the Abort Controller API as we must involve it everywhere in the control flow, it can become tedious and error-prone.
+
+```ts
+import { setTimeout } from "node:timers/promises";
+
+async function backgroundJobWithCancellation(signal: AbortSignal) {
+  const processTime = 10_000;
+
+  if (signal.aborted) {
+    return;
+  }
+
+  let interval: NodeJS.Timer;
+
+  signal.addEventListener("abort", () => {
+    console.log("aborting job, releasing timer resource...");
+    clearInterval(interval);
+  }, {
+    once: true
+  });
+
+  interval = setInterval(() => {
+    // process something...
+  }, 1000);
+
+  try {
+    // inherits from the same signal to cancel this timer as well
+    await setTimeout(processTime, undefined, { signal });
+  } finally {
+    clearInterval(interval);
+  }
+}
+```
+
+You might have noticed it, but if we stop there, we're still leaking memory. In most scenarios, either when receiving a cancellation request through the signal or when the `processTime` requests the end of task, the `setInterval` timer is correctly released. However in the later case, the task just ends without using the provided signal, meaning that the listener callback (on "abort" event) will never be called. In that specific case, we are wastefully keeping in memory that listener. Thankfully, `addEventListener` also natively supports the Abort Controller API. 
+
+```ts
+import { setTimeout } from "node:timers/promises";
+
+async function backgroundJobWithCancellation(signal: AbortSignal) {
+  const processTime = 10_000;
+
+  if (signal.aborted) {
+    return;
+  }
+
+  let interval: NodeJS.Timer;
+  const abortController = new AbortController();
+
+  signal.addEventListener("abort", () => {
+    clearInterval(interval);
+  }, {
+    once: true,
+    // added that
+    signal: abortController.signal,
+  });
+
+  interval = setInterval(() => {
+    // process something...
+  }, 1000);
+
+  try {
+    await setTimeout(processTime, undefined, { signal });
+  } finally {
+    // abort to release the listener
+    abortController.abort();
+    clearInterval(interval);
+  }
+}
+```
+
+Also, note that in the case were we receive an "abort" signal, we clear the interval two times, ideally we would want avoid releasing something already released as it might produce failures, but in that case clearing a timeout that was already destroyed [does literally nothing](https://github.com/nodejs/node/blob/a40a6c890afe0d1d0ca78db015146178c25af079/lib/timers.js#L184).
+
+From the external world if we want to interrupt the computation, we also have to manipulate our own instance of the Abort Controller we then provide in the `backgroundJobWithCancellation` function arguments:
+
+```ts
+async function main() {
+  const controller = new AbortController();
+
+  // later in time
+  setTimeoutCb(() => {
+    controller.abort();
+  }, 1000);
+
+  await backgroundJobWithCancellation(controller.signal);
+}
+```
+
+As we can see with that example, it's very easy to miss some important details in the control flow as adding listeners to manage cancellation is also adding a resource that can originate memory leaks. When nesting and having child computations, you must ensure to **propagate the parent signal in all the computation tree, making it tedious and very hard to maintain properly**.
+
+Let's see now the difference using Effect and how it deals with interruptions. Effect embeds its own way of scheduling timers, the prefered way to do that would be to use `Effect.repeat` (an example is available in the [03-resilience.ts](https://github.com/antoine-coulon/effect-introduction/blob/main/src/03-resilience.ts) source file). 
+
+Just so that the example remains simple with the same timer API, let's keep using `setInterval`.
+
+```ts
+const backgroundJob = pipe(
+  Effect.asyncInterrupt(() => {
+    const timer = setInterval(() => {
+      console.log("processing job...");
+    }, 500);
+
+    return Effect.sync(() => {
+      console.log("releasing resources...");
+      clearInterval(timer);
+    });
+  })
+);
+```
+
+`asyncInterrupt` allows us to way to describe an asynchronous side-effect plus offers us the control over its interruption. The Effect returned in the `asyncInterrupt` will be executed in case `backgroundJob` gets interrupted.
+
+Using Effect, we have a guarantee that the release Effect returned by the `asyncInterrupt` method will be executed. The interruption model allows us to have a straightforward but also a fine-grained control over interruptibility.
+
+To simulate an interruption happening, we can manually interrupt the Fiber currently running the background job.
+
+> An Effect is always run in a Fiber. The runtime has always atleast one root Fiber to run Effects. In the case where you want to model concurrent operations, you should favor high-level operators such as `zipPar, forEachPar` because Fibers are low-level constructs so you don't usually need to manipulate them directly. See more in the [Concurrency](#5-concurrency) part.
 
 ```ts
 pipe(
-  Effect.asyncInterrupt(() => {
-    const timer = setInterval(() => {}, 1000);
-    return Effect.sync(() => {
-      clearInterval(timer);
-    });
-  }),
+  backgroundJob,
+  // Fork the execution of the job in a child Fiber
   Effect.fork,
-  Effect.flatMap((fiber) => Fiber.interrupt(fiber))
+  // Forking gives us a reference to the child Fiber
+  Effect.flatMap((fiberId) =>
+    pipe(
+      // After 2 seconds, we arbitrarily interrupt the child Fiber 
+      Fiber.interrupt(fiberId),
+      Effect.delay(Duration.seconds(2))
+    )
+  ),
+  // Run the program
+  Effect.runFork
 );
 ```
 
-There is a guarantee that the release Effect return by the `asyncInterrupt` method will be executed. The interruption model also allows us to have a fine-grained control over interruptibility. 
+This case is trivial, but what's great is that Effect simplifies a lot the way interruptibility is managed through chains of computations with a nice control flow and very rich semantics. As it was shown when using the Abort Controller API, things can become quickly verbose, messy and error-prone as signals must be handled, propagated, "abort" event handlers must be cleaned up, etc. On the contrary, the Effect runtime manages all that for us so we just have to manage our cancellation logic. Moreover, that powerful interruptibility management also applies to Layers where our application dependencies live.
 
+Note: more interrupt examples are available in the `src/03-resilience.ts` TypeScript file, involving interruptions of nested computations and different ways of reacting following interruptions.
 
 ## 4. Composability
 
@@ -1128,6 +1334,10 @@ Other interesting facts about the fiber-based runtime:
 - It's stack safe, because it controls the execution of operations, it's able to determine how much operations it can execute on the current tick of the Event Loop. 
 - It's memory efficient because after X operations (currently 2048), the fiber yields, letting the Event Loop breath and letting other tasks run.  
 - It's overall faster, because the runtime can combine/batch/eliminate operations and tries to leverage synchronous operations as much as it can. 
+
+A Fiber can be thought of as a virtual thread that emulate the same behavior as OS threads with nicer abstractions and without the platform constraints, for instance thousands of virtual threads can be run efficiently in a single-thread allocated to run application code, like Node.js by default (putting worker threads aside). In the context of ZIO, Fibers are scheduled within an OS thread pool running on the JVM. 
+
+Like threads, Fibers are low-level constructs so you don't usually need to manipulate them directly. Instead, you can use a very rich set of concurrent primitives directly using Effects, these are mostly suffixed by **par** (parallel), such as `zipPar`, `forEachPar`, etc.
 
 
 ## 7. Tracing & Logging

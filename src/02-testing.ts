@@ -1,8 +1,8 @@
 /**
  *
- * --------------------
+ * -------------
  * 02-testing.ts
- * --------------------
+ * -------------
  *
  * Testing is the ability of asserting that a system behaves as expected.
  * As obvious as it may seem, testing can be very tricky if the program is coupled

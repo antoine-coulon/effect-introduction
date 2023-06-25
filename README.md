@@ -571,12 +571,12 @@ Dependencies appearing in the `R` generic type parameter is only refering to int
 This example shows the use of one dependency, but it's important to note that Effect is able to **deeply infer the dependencies required as a TypeScript Union type**, wherever the dependencies come from in the Effect tree:
 
 ```ts
-const computation1: Effect<DependencyA, never, number> = {};
+const effect1: Effect<DependencyA, never, number> = {};
 
-const computation2: Effect<DependencyB, never, number> = {};
+const effect2: Effect<DependencyB, never, number> = {};
 
 const program: Effect<DependencyA | DependencyB, never, number> = Effect.gen(function* ($) {
-                      // ^ See how both respective dependencies from "computation1" and "computation2"
+                      // ^ See how both respective dependencies from "effect1" and "effect2"
                       // now were propagated in the dependencies of our main program, represented as a typed union.
   const result1 = yield* $(effect1);
   const result2 = yield* $(effect2);

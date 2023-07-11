@@ -15,7 +15,7 @@ import { pipe } from "@effect/data/Function";
 import * as Effect from "@effect/io/Effect";
 import * as Context from "@effect/data/Context";
 import * as assert from "node:assert";
-import * as Either from "@effect/data/Either";
+import * as Exit from "@effect/io/Exit";
 
 /**
  * Let's just add some boilerplate to emulate a test runner
@@ -23,11 +23,11 @@ import * as Either from "@effect/data/Either";
 function test(name: string, testEffect: Effect.Effect<never, unknown, void>) {
   return pipe(
     testEffect,
-    Effect.runSyncEither,
-    Either.match(
-      () => console.log(`FAILED: "${name}"`),
-      () => console.log(`PASSED: "${name}"`)
-    )
+    Effect.runSyncExit,
+    Exit.match({
+      onFailure: () => console.log(`FAILED: "${name}"`),
+      onSuccess: () => console.log(`PASSED: "${name}"`),
+    })
   );
 }
 

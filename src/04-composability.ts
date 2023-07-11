@@ -34,14 +34,14 @@ const TodosRepository = Context.Tag<TodosRepository>();
 const TodosRepositoryLive = Layer.succeed(TodosRepository, {
   fetchTodo: (id) =>
     pipe(
-      Effect.tryCatchPromise(
-        () =>
+      Effect.tryPromise({
+        try: () =>
           fetch(`https://jsonplaceholder.typicode.com/todos/${id}`).then(
             (response) => response.json()
           ),
-        () => new FetchError(id)
-      ),
-      Effect.flatMap(S.parseEffect(Todo)),
+        catch: () => new FetchError(id),
+      }),
+      Effect.flatMap(S.parse(Todo)),
       Effect.mapError(() => new DecodeError(id))
     ),
 });
@@ -49,7 +49,7 @@ const TodosRepositoryLive = Layer.succeed(TodosRepository, {
 const program = (ids: number[]) => {
   const schedulePolicy = pipe(
     Schedule.exponential(Duration.seconds(1), 0.5),
-    Schedule.compose(Schedule.elapsed()),
+    Schedule.compose(Schedule.elapsed),
     Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(5)))
   );
 
@@ -58,13 +58,22 @@ const program = (ids: number[]) => {
     Effect.flatMap((repository) =>
       pipe(
         ids,
-        Effect.forEachPar((id) =>
-          pipe(repository.fetchTodo(id), Effect.retry(schedulePolicy))
-        ),
-        Effect.withParallelism(5)
+        Effect.forEach(
+          (id) =>
+            pipe(
+              repository.fetchTodo(id),
+              Effect.tap(() =>
+                Effect.log({ level: "Info" })(`Successfully fetched ${id}`)
+              ),
+              Effect.retry(schedulePolicy)
+            ),
+          { concurrency: 5 }
+        )
       )
     ),
-    Effect.tapError(({ id }) => Effect.logError(`Error fetching ${id}`)),
+    Effect.tapError(({ id }) =>
+      pipe(`Error fetching ${id}`, Effect.log({ level: "Error" }))
+    ),
     Effect.provideLayer(TodosRepositoryLive),
     Effect.runPromise
   );

@@ -11,11 +11,12 @@
 
 import * as Effect from "@effect/io/Effect";
 import * as Fiber from "@effect/io/Fiber";
-import { flow, pipe } from "@effect/data/Function";
+import { pipe } from "@effect/data/Function";
 import * as Duration from "@effect/data/Duration";
 import * as Schedule from "@effect/io/Schedule";
 import { setTimeout } from "node:timers/promises";
 import { setTimeout as setTimeoutCb } from "node:timers";
+import { DurationValue } from "@effect/data/Duration";
 
 /**
  * Retrying is a core part of resilience and it is a very common pattern to recover
@@ -159,7 +160,7 @@ pipe(
       // Delay between each retry
       Schedule.addDelay(() => Duration.millis(500)),
       // Retry until a duration is reached
-      Schedule.compose(Schedule.elapsed()),
+      Schedule.compose(Schedule.elapsed),
       Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(3))),
       // Retry until a condition is met
       Schedule.whileInput(
@@ -358,7 +359,9 @@ const backgroundJobWithEffect = pipe(
 const backgroundJobEffectProgram = pipe(
   backgroundJobWithEffect,
   Effect.fork,
-  Effect.flatMap(flow(Fiber.interrupt, Effect.delay(Duration.seconds(2))))
+  Effect.flatMap((fiber) =>
+    pipe(Fiber.interrupt(fiber), Effect.delay(Duration.seconds(2)))
+  )
   // uncomment to run
   // Effect.runFork
 );
@@ -375,7 +378,7 @@ const backgroundJobWithEffectRepeat = pipe(
 
     const timeout = setTimeoutCb(() => {
       console.log("job done");
-      resume(Effect.unit());
+      resume(Effect.unit);
     }, 250);
 
     return Effect.sync(() => {
@@ -404,23 +407,34 @@ const backgroundJobEffectRepeatProgram = pipe(
  * three tasks that are all interrupted when the child Fiber is interrupted.
  */
 
+const asMillis = (duration: DurationValue): number =>
+  duration._tag === "Millis" ? duration.millis : 0;
+
 const backgroundJobWithEffectNested = pipe(
   [Duration.seconds(1), Duration.seconds(2), Duration.seconds(3)],
-  Effect.forEachPar((duration) =>
-    pipe(
-      Effect.delay(duration)(
-        pipe(
-          Effect.sync(() => {
-            console.log(`Done task with ${duration.millis}ms duration`);
-          })
+  Effect.forEach(
+    (duration) =>
+      pipe(
+        Effect.delay(duration)(
+          pipe(
+            Effect.sync(() => {
+              console.log(
+                `Done task with ${asMillis(duration.value)}ms duration`
+              );
+            })
+          )
+        ),
+        Effect.onInterrupt(() =>
+          Effect.sync(() =>
+            console.log(
+              `Interrupted task with ${asMillis(duration.value)}s duration`
+            )
+          )
         )
       ),
-      Effect.onInterrupt(() =>
-        Effect.sync(() =>
-          console.log(`Interrupted task with ${duration.millis}ms duration`)
-        )
-      )
-    )
+    {
+      concurrency: "unbounded",
+    }
   ),
   Effect.onInterrupt(() =>
     Effect.sync(() => console.log("Interrupted the whole job"))

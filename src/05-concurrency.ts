@@ -22,8 +22,9 @@ function retrieveAllUsers() {
 // bounded
 pipe(
   userIds,
-  Effect.forEachPar((id) => Effect.promise(() => fetchUser(id))),
-  Effect.withParallelism(30)
+  Effect.forEach((id) => Effect.promise(() => fetchUser(id)), {
+    concurrency: 30,
+  })
 );
 
 /**
@@ -44,15 +45,13 @@ function longRunningPromise() {
 
 // Promise.race([quickRunningPromise(), longRunningPromise()]);
 
-const quickRunningEffect = pipe(
-  Effect.delay(Duration.seconds(1))(Effect.unit())
-);
+const quickRunningEffect = pipe(Effect.delay(Duration.seconds(1))(Effect.unit));
 
 const longRunningEffect = pipe(
-  Effect.delay(Duration.seconds(5))(Effect.unit()),
+  Effect.delay(Duration.seconds(5))(Effect.unit),
   Effect.onInterrupt(() => {
     console.log("interrupted!");
-    return Effect.unit();
+    return Effect.unit;
   })
 );
 

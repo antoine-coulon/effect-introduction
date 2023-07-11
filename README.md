@@ -840,7 +840,7 @@ import * as Schedule from "@effect/io/Schedule";
 export const retrySchedule = pipe(
   Schedule.exponential(Duration.millis(10), 2.0),
   Schedule.either(Schedule.spaced(Duration.seconds(1))),
-  Schedule.compose(Schedule.elapsed()),
+  Schedule.compose(Schedule.elapsed),
   Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(30)))
 );
 ```
@@ -1070,7 +1070,7 @@ const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 const schedulePolicy = pipe(
   Schedule.exponential(Duration.seconds(1), 0.5),
-  Schedule.compose(Schedule.elapsed()),
+  Schedule.compose(Schedule.elapsed),
   Schedule.whileOutput(Duration.lessThanOrEqualTo(Duration.seconds(5)))
 );
 
@@ -1079,13 +1079,17 @@ const listTodos = pipe(
   Effect.flatMap((todosRepository) =>
     pipe(
       ids,
-      Effect.forEachPar((id) =>
-        pipe(todosRepository.fetchTodo(id), Effect.retry(schedulePolicy))
-      ),
-      Effect.withParallelism(5)
+      Effect.forEach(
+        (id) => pipe(todosRepository.fetchTodo(id), Effect.retry(schedulePolicy)),
+        {
+          concurrency: 5
+        }
+      )
     )
   ),
-  Effect.tapError(({ id }) => Effect.logError(`Error fetching ${id}`))
+  Effect.tapError(({ id }) => 
+    pipe(`Error fetching ${id}`, Effect.log({ level: "Error" }))
+  )
 );
 ```
 
@@ -1132,14 +1136,14 @@ const TodosRepository = Context.Tag<TodosRepository>();
 const TodosRepositoryLive = Layer.succeed(TodosRepository, {
   fetchTodo: (id) =>
     pipe(
-      Effect.tryCatchPromise(
-        () =>
+      Effect.tryPromise({
+        try: () =>
           fetch(`https://jsonplaceholder.typicode.com/todos/${id}`).then(
             (response) => response.json()
           ),
-        () => new FetchError(id)
-      ),
-      Effect.flatMap(S.parseEffect(Todo)),
+        catch: () => new FetchError(id),
+      }),
+      Effect.flatMap(S.parse(Todo)),
       Effect.mapError(() => new DecodeError(id))
     ),
 });
@@ -1230,8 +1234,9 @@ Effect allows us to control the number of concurrent operations very easily:
 ```ts
 pipe(
   userIds,
-  Effect.forEachPar((id) => Effect.promise(() => fetchUser(id))),
-  Effect.withParallelism(30)
+  Effect.forEach((id) => Effect.promise(() => fetchUser(id)), {
+    concurrency: 30
+  })
 );
 ```
 
@@ -1266,14 +1271,14 @@ Effect are by nature interruptible, meaning that all these operations are ressou
 
 ```ts
 const quickRunningEffect = pipe(
-  Effect.delay(Duration.seconds(1))(Effect.unit())
+  Effect.delay(Duration.seconds(1))(Effect.unit)
 );
 
 const longRunningEffect = pipe(
-  Effect.delay(Duration.seconds(5))(Effect.unit()),
+  Effect.delay(Duration.seconds(5))(Effect.unit),
   Effect.onInterrupt(() => {
     console.log("interrupted!");
-    return Effect.unit();
+    return Effect.unit;
   })
 );
 
@@ -1284,7 +1289,6 @@ Effect.runCallback(
   }
 );
 ```
-
 
 One great thing is the Effect runtime will automatically perform cleanup/release of the underlying tasks once a computation is interrupted.
 

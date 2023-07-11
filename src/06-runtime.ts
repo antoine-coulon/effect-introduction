@@ -106,7 +106,10 @@ const programThatDoesnotMakeAnySense = pipe(
   Effect.sync(() => Math.random()),
   Effect.flatMap(() => Effect.succeed(2)),
   Effect.map(() => 10),
-  Effect.zipPar(Effect.promise(() => Promise.resolve(10)))
+  Effect.zip(
+    Effect.promise(() => Promise.resolve(10)),
+    { concurrent: true }
+  )
 );
 
 // console.log(programThatDoesnotMakeAnySense.i0);

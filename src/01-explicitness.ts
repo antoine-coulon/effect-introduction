@@ -90,7 +90,7 @@ function isSomeErrorException(exception: unknown): exception is SomeError {
 }
 
 function isSomeOtherErrorException(exception: unknown): exception is SomeError {
-  return exception instanceof Error && exception.name === "SomeError";
+  return exception instanceof Error && exception.name === "SomeOtherError";
 }
 
 function blindlyCatch() {

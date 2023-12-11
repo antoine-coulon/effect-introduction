@@ -699,7 +699,7 @@ it("Should do something", async () => {
   const user = await Effect.runPromise(
     pipe(
       createUser(), 
-      Effect.provideService(UserRepository, InMemoryUserRepository)
+      Effect.provideService(UserRepository, new InMemoryUserRepository())
     )
   );
   expect(user).toEqual("something");

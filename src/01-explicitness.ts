@@ -89,7 +89,9 @@ function isSomeErrorException(exception: unknown): exception is SomeError {
   return exception instanceof Error && exception.name === "SomeError";
 }
 
-function isSomeOtherErrorException(exception: unknown): exception is SomeError {
+function isSomeOtherErrorException(
+  exception: unknown
+): exception is SomeOtherError {
   return exception instanceof Error && exception.name === "SomeOtherError";
 }
 

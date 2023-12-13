@@ -1428,16 +1428,17 @@ Summary
 
 All that in just one tool, with TypeScript.
 
-The standard library is very rich and we didn't cover everything there! In addition to the standard library, there is also a set of useful additional packages:
+The standard library is very rich and we didn't cover everything there! In addition to the standard library, there is also a set of useful additional packages that you can find in the "API Reference" section of the [Effect documentation](https://effect.website)
+
+Here is an overview and non-exhaustive list:
 
 - [@effect/schema](https://github.com/Effect-TS/schema)
-- [@effect/match](https://github.com/Effect-TS/match)
 - [@effect/cli](https://github.com/Effect-TS/cli)
-- [@effect/rpc](https://github.com/Effect-TS/rpc)
-- [@effect/process](https://github.com/Effect-TS/process)
-- [@effect/fastify](https://github.com/Effect-TS/fastify)
+- [@effect/platform](https://github.com/Effect-TS/platform)
+- [@effect/opentelemetry](https://github.com/Effect-TS/opentelemetry)
+- [@effect/printer](https://github.com/Effect-TS/printer)
   
-And many more to come
+And many more to come!
 
 Other resources: 
 

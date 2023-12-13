@@ -5,15 +5,12 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  '@effect/data':
-    specifier: 0.14.1
-    version: 0.14.1
-  '@effect/io':
-    specifier: 0.32.1
-    version: 0.32.1
   '@effect/schema':
-    specifier: 0.26.0
-    version: 0.26.0
+    specifier: ^0.53.1
+    version: 0.53.1(effect@2.0.0-next.60)(fast-check@3.14.0)
+  effect:
+    specifier: 2.0.0-next.60
+    version: 2.0.0-next.60
 
 devDependencies:
   '@types/node':
@@ -28,22 +25,14 @@ devDependencies:
 
 packages:
 
-  /@effect/data@0.14.1:
-    resolution: {integrity: sha512-MV6nI65oYcm8eZHnC0GnwXdY2tvybeb2lKCVFg+j/R5KptCKaunc0hXtPaXUSZiRgKJNxRRoHGtNzR+dZ/yiiA==}
-    dev: false
-
-  /@effect/io@0.32.1:
-    resolution: {integrity: sha512-0KkqeJKU4Y2YBAi9RmCJkqABp6ZpxXXkZA1WnhbiVdIPaV+Izp4Ek2wJsnL+CnOzg/gJJ6DTPLLQVXuSz+Pu8Q==}
+  /@effect/schema@0.53.1(effect@2.0.0-next.60)(fast-check@3.14.0):
+    resolution: {integrity: sha512-R3QW8RV/0KiX6xWaS6UpPF3gl07zThdDTpWJQVJ8Oobbu7fKZ7LjmjLBcjdESY0UPdACvLdfGSfLxartqUihyA==}
+    peerDependencies:
+      effect: 2.0.0-next.60
+      fast-check: ^3.13.2
     dependencies:
-      '@effect/data': 0.14.1
-    dev: false
-
-  /@effect/schema@0.26.0:
-    resolution: {integrity: sha512-dZNTj9xbvF8orsrSl+VnI6XIFIxXIJS+PNNalq25O06c2/a5oqZKdnlDRORvoeUjdO7X4rPoXJWI5dcNBO5UdQ==}
-    dependencies:
-      '@effect/data': 0.14.1
-      '@effect/io': 0.32.1
-      fast-check: 3.11.0
+      effect: 2.0.0-next.60
+      fast-check: 3.14.0
     dev: false
 
   /@esbuild-kit/cjs-loader@2.4.2:
@@ -273,6 +262,10 @@ packages:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
     dev: true
 
+  /effect@2.0.0-next.60:
+    resolution: {integrity: sha512-23KhlVACgrg5UPFu9i4szybSU4cCU4T/7CX4pe0jV84QBZX0zm96WzwCtg6dqOnmUzBL7hm6S+iiPW2Rab13Uw==}
+    dev: false
+
   /esbuild@0.17.19:
     resolution: {integrity: sha512-XQ0jAPFkK/u3LcVRcvVHQcTIqD6E2H1fvZMA5dQPSOWb3suUbWbfbRf94pjc0bNzRYLfIrDRQXr7X+LHIm5oHw==}
     engines: {node: '>=12'}
@@ -303,11 +296,11 @@ packages:
       '@esbuild/win32-x64': 0.17.19
     dev: true
 
-  /fast-check@3.11.0:
-    resolution: {integrity: sha512-H2tctb7AGfFQfz+DEr3UWhJ3s47LXsGp5g3jeJr5tHjnf4xUvpArIqiwcDmL2EXiv+auLHIpF5MqaIpIKvpxiA==}
+  /fast-check@3.14.0:
+    resolution: {integrity: sha512-9Z0zqASzDNjXBox/ileV/fd+4P+V/f3o4shM6QawvcdLFh8yjPG4h5BrHUZ8yzY6amKGDTAmRMyb/JZqe+dCgw==}
     engines: {node: '>=8.0.0'}
     dependencies:
-      pure-rand: 6.0.2
+      pure-rand: 6.0.4
     dev: false
 
   /fsevents@2.3.2:
@@ -324,8 +317,8 @@ packages:
       resolve-pkg-maps: 1.0.0
     dev: true
 
-  /pure-rand@6.0.2:
-    resolution: {integrity: sha512-6Yg0ekpKICSjPswYOuC5sku/TSWaRYlA0qsXqJgM/d/4pLPHPuTxK7Nbf7jFKzAeedUhR8C7K9Uv63FBsSo8xQ==}
+  /pure-rand@6.0.4:
+    resolution: {integrity: sha512-LA0Y9kxMYv47GIPJy6MI84fqTd2HmYZI83W/kM/SkKfDlajnZYfmXFTxkbY+xSBPkLJxltMa9hIkmdc29eguMA==}
     dev: false
 
   /resolve-pkg-maps@1.0.0:

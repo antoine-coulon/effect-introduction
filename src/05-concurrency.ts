@@ -1,8 +1,8 @@
 /** WIP */
 
-import { pipe } from "@effect/data/Function";
-import * as Effect from "@effect/io/Effect";
-import * as Duration from "@effect/data/Duration";
+import { pipe } from "effect/Function";
+import * as Effect from "effect/Effect";
+import * as Duration from "effect/Duration";
 
 /**
  * BOUNDED VS UNBOUNDED

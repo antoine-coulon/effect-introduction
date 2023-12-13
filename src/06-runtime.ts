@@ -1,8 +1,8 @@
 /** WIP */
 
-import { pipe } from "@effect/data/Function";
-import * as Effect from "@effect/io/Effect";
-import { isExit, isSuccess } from "@effect/io/Exit";
+import { pipe } from "effect/Function";
+import * as Effect from "effect/Effect";
+import { isExit, isSuccess } from "effect/Exit";
 
 function computeEffect() {
   return Effect.sync(() => {
@@ -203,7 +203,7 @@ const simpleProgram = pipe(Effect.sync(() => 5));
 function run<R, E, A>(program: Effect.Effect<R, E, A>): A {
   // @ts-ignore - unsafe
   let current = program.i0;
-  let exitValue = undefined;
+  let exitValue;
 
   while (current != null) {
     switch (current._tag) {

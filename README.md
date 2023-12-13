@@ -71,7 +71,7 @@ Consequently, Effect is a datatype with 3 generic type parameters:
 Resulting in: `Effect<R, E, A>`.
 
 ```ts
-import type { Effect } from "@effect/io/Effect";
+import type { Effect } from "effect/Effect";
 
 type Program<Environment, Error, Success> = Effect<
   Environment,
@@ -371,8 +371,8 @@ Do you remember our first raw TypeScript samples? Let's rewrite it with Effect. 
 
 ```ts
 
-import { pipe } from "@effect/data/Function";
-import * as Effect from "@effect/io/Effect";
+import { pipe } from "effect/Function";
+import * as Effect from "effect/Effect";
 
 namespace EffectNumberGeneratorLibrary {
   export function generateRandomNumber(): Effect.Effect<never, Error, number> {
@@ -525,8 +525,8 @@ In our very simple example below, it's only registering the user to a given stor
 
 ```ts
 
-import * as Effect from "@effect/io/Effect";
-import * as Context from "@effect/data/Context";
+import * as Effect from "effect/Effect";
+import * as Context from "effect/Context";
 
 interface UserRepository {
   createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
@@ -805,10 +805,10 @@ Thankfully, Effect also comes in with a rich set of builtin ways to deal with re
 Let's rewrite the code examples with Effect.
 
 ```ts
-import * as Effect from "@effect/io/Effect";
-import { pipe } from "@effect/data/Function";
-import * as Duration from "@effect/data/Duration";
-import * as Schedule from "@effect/io/Schedule";
+import * as Effect from "effect/Effect";
+import { pipe } from "effect/Function";
+import * as Duration from "effect/Duration";
+import * as Schedule from "effect/Schedule";
 
 const computationWithFiveRetries = pipe(
   Effect.fail(new Error("Some error")),
@@ -833,9 +833,9 @@ And even more complex ones, combining multiple policies to create one composed p
 - Recurs while the time elapsed during the whole policy is less than or equal to 30 seconds
 
 ```ts
-import { pipe } from "@effect/data/Function";
-import * as Duration from "@effect/data/Duration";
-import * as Schedule from "@effect/io/Schedule";
+import { pipe } from "effect/Function";
+import * as Duration from "effect/Duration";
+import * as Schedule from "effect/Schedule";
 
 export const retrySchedule = pipe(
   Schedule.exponential(Duration.millis(10), 2.0),
@@ -1104,10 +1104,10 @@ What's great is that the same composition principles smoothly apply on all modul
 For instance, the [@effect/schema](https://github.com/Effect-TS/schema) library created by [Giulio Canti](https://github.com/gcanti) integrates super nicely, let's take a look at a simple `TodosRepository` implementation:
 
 ```ts
-import * as Effect from "@effect/io/Effect";
-import * as Layer from "@effect/io/Layer";
-import * as Context from "@effect/data/Context";
-import { pipe } from "@effect/data/Function";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as Context from "effect/Context";
+import { pipe } from "effect/Function";
 import * as S from "@effect/schema/Schema";
 
 const Todo = S.struct({
@@ -1115,7 +1115,7 @@ const Todo = S.struct({
   completed: S.boolean,
 });
 
-type Todo = S.To<typeof Todo>;
+type Todo = S.Schema.To<typeof Todo>;
 
 class FetchError {
   readonly _tag = "FetchError";
@@ -1442,5 +1442,5 @@ And many more to come
 Other resources: 
 
 - **[Official Effect documentation](https://effect.website/)**
-- **[@effect/io documentation](https://effect-ts.github.io/effect/)**
+- **[effect documentation](https://effect-ts.github.io/effect/)**
 

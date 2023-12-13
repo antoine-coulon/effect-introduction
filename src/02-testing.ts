@@ -11,11 +11,12 @@
  * the dependency inversion principle and explicit dependencies to favor testability.
  */
 
-import { pipe } from "@effect/data/Function";
-import * as Effect from "@effect/io/Effect";
-import * as Context from "@effect/data/Context";
 import * as assert from "node:assert";
-import * as Exit from "@effect/io/Exit";
+
+import { pipe } from "effect/Function";
+import * as Effect from "effect/Effect";
+import * as Context from "effect/Context";
+import * as Exit from "effect/Exit";
 
 /**
  * Let's just add some boilerplate to emulate a test runner

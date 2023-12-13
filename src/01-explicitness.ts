@@ -314,8 +314,8 @@ const backofficeService = {
  * explicitness and see how Effect solves that.
  */
 
-import { pipe } from "@effect/data/Function";
-import * as Effect from "@effect/io/Effect";
+import { pipe } from "effect/Function";
+import * as Effect from "effect/Effect";
 
 namespace EffectNumberGeneratorLibrary {
   export function generateRandomNumber(): Effect.Effect<never, Error, number> {
@@ -444,7 +444,7 @@ namespace EffectNumberGeneratorLibraryWithUnificationProblem {
  * also use the "unify" function from @effect/data.
  */
 
-import { unify } from "@effect/data/Unify";
+import { unify } from "effect/Unify";
 
 namespace EffectNumberGeneratorLibraryWithCleanUnification {
   export function generateRandomNumber(): Effect.Effect<
@@ -531,7 +531,7 @@ interface UserRepository {
   createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
 }
 
-import * as Context from "@effect/data/Context";
+import * as Context from "effect/Context";
 
 const UserRepository = Context.Tag<UserRepository>();
 

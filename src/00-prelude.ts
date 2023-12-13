@@ -20,7 +20,7 @@
  * history.
  */
 
-import type { Effect } from "@effect/io/Effect";
+import type { Effect } from "effect/Effect";
 
 /**
  * `Effect` is the core datatype of the ecosystem, but what if I tell you that it

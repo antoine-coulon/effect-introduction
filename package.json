@@ -9,9 +9,8 @@
   "author": "Antoine Coulon",
   "license": "MIT",
   "dependencies": {
-    "@effect/data": "0.14.1",
-    "@effect/io": "0.32.1",
-    "@effect/schema": "0.26.0"
+    "@effect/schema": "^0.53.1",
+    "effect": "2.0.0-next.60"
   },
   "devDependencies": {
     "@types/node": "^20.2.5",

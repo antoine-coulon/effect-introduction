@@ -1,17 +1,17 @@
-import * as Effect from "@effect/io/Effect";
-import * as Layer from "@effect/io/Layer";
-import * as Context from "@effect/data/Context";
-import { pipe } from "@effect/data/Function";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as Context from "effect/Context";
+import { pipe } from "effect/Function";
 import * as S from "@effect/schema/Schema";
-import * as Duration from "@effect/data/Duration";
-import * as Schedule from "@effect/io/Schedule";
+import * as Duration from "effect/Duration";
+import * as Schedule from "effect/Schedule";
 
 const Todo = S.struct({
   id: S.number,
   completed: S.boolean,
 });
 
-type Todo = S.To<typeof Todo>;
+type Todo = S.Schema.To<typeof Todo>;
 
 class FetchError {
   readonly _tag = "FetchError";
@@ -62,19 +62,15 @@ const program = (ids: number[]) => {
           (id) =>
             pipe(
               repository.fetchTodo(id),
-              Effect.tap(() =>
-                Effect.log({ level: "Info" })(`Successfully fetched ${id}`)
-              ),
+              Effect.tap(() => Effect.logInfo(`Successfully fetched ${id}`)),
               Effect.retry(schedulePolicy)
             ),
           { concurrency: 5 }
         )
       )
     ),
-    Effect.tapError(({ id }) =>
-      pipe(`Error fetching ${id}`, Effect.log({ level: "Error" }))
-    ),
-    Effect.provideLayer(TodosRepositoryLive),
+    Effect.tapError(({ id }) => Effect.logError(`Error fetching ${id}`)),
+    Effect.provide(TodosRepositoryLive),
     Effect.runPromise
   );
 };

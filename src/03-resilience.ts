@@ -9,14 +9,14 @@
  * there including retrying, circuit breaking, timeouts, resource release, etc.
  */
 
-import * as Effect from "@effect/io/Effect";
-import * as Fiber from "@effect/io/Fiber";
-import { pipe } from "@effect/data/Function";
-import * as Duration from "@effect/data/Duration";
-import * as Schedule from "@effect/io/Schedule";
+import * as Effect from "effect/Effect";
+import * as Fiber from "effect/Fiber";
+import { pipe } from "effect/Function";
+import * as Duration from "effect/Duration";
+import * as Schedule from "effect/Schedule";
 import { setTimeout } from "node:timers/promises";
 import { setTimeout as setTimeoutCb } from "node:timers";
-import { DurationValue } from "@effect/data/Duration";
+import { DurationValue } from "effect/Duration";
 
 /**
  * Retrying is a core part of resilience and it is a very common pattern to recover
@@ -331,7 +331,7 @@ async function backgroundJobProgram() {
  * clearing up the asynchronous operation.
  */
 const backgroundJobWithEffect = pipe(
-  Effect.asyncInterrupt(() => {
+  Effect.async(() => {
     const timer = setInterval(() => {
       console.log("processing job...");
     }, 500);
@@ -373,7 +373,7 @@ const backgroundJobEffectProgram = pipe(
  * You can consider it as a non-blocking `while(true)` loop.
  */
 const backgroundJobWithEffectRepeat = pipe(
-  Effect.asyncInterrupt<never, never, void>((resume) => {
+  Effect.async<never, never, void>((resume) => {
     console.log("starting job");
 
     const timeout = setTimeoutCb(() => {

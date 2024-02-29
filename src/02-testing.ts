@@ -13,15 +13,12 @@
 
 import * as assert from "node:assert";
 
-import { pipe } from "effect/Function";
-import * as Effect from "effect/Effect";
-import * as Context from "effect/Context";
-import * as Exit from "effect/Exit";
+import { Effect, pipe, Context, Exit } from "effect";
 
 /**
  * Let's just add some boilerplate to emulate a test runner
  */
-function test(name: string, testEffect: Effect.Effect<never, unknown, void>) {
+function test(name: string, testEffect: Effect.Effect<void, unknown, never>) {
   return pipe(
     testEffect,
     Effect.runSyncExit,
@@ -37,10 +34,10 @@ class User {}
 class UserCreationError {}
 
 interface UserRepository {
-  createUser: () => Effect.Effect<never, UserCreationError, User>;
+  createUser: () => Effect.Effect<User, UserCreationError, never>;
 }
 
-const UserRepository = Context.Tag<UserRepository>();
+const UserRepository = Context.GenericTag<UserRepository>("UserRepository");
 
 const dummyUseCase = pipe(
   UserRepository,

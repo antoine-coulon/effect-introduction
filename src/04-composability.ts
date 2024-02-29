@@ -1,10 +1,5 @@
-import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
-import * as Context from "effect/Context";
-import { pipe } from "effect/Function";
+import { Effect, Layer, Context, pipe, Duration, Schedule } from "effect";
 import * as S from "@effect/schema/Schema";
-import * as Duration from "effect/Duration";
-import * as Schedule from "effect/Schedule";
 
 const Todo = S.struct({
   id: S.number,
@@ -26,10 +21,10 @@ class DecodeError {
 interface TodosRepository {
   fetchTodo: (
     id: number
-  ) => Effect.Effect<TodosRepository, FetchError | DecodeError, Todo>;
+  ) => Effect.Effect<Todo, FetchError | DecodeError, never>;
 }
 
-const TodosRepository = Context.Tag<TodosRepository>();
+const TodosRepository = Context.GenericTag<TodosRepository>("TodosRepository");
 
 const TodosRepositoryLive = Layer.succeed(TodosRepository, {
   fetchTodo: (id) =>
@@ -41,7 +36,7 @@ const TodosRepositoryLive = Layer.succeed(TodosRepository, {
           ),
         catch: () => new FetchError(id),
       }),
-      Effect.flatMap(S.parse(Todo)),
+      Effect.flatMap(S.decode(Todo)),
       Effect.mapError(() => new DecodeError(id))
     ),
 });

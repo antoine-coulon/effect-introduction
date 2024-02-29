@@ -20,7 +20,7 @@
  * history.
  */
 
-import type { Effect } from "effect/Effect";
+import type { Effect } from "effect";
 
 /**
  * `Effect` is the core datatype of the ecosystem, but what if I tell you that it
@@ -31,15 +31,19 @@ import type { Effect } from "effect/Effect";
  * https://discord.com/channels/795981131316985866/795983589644304396/948653981863923813.
  *
  * Consequently, Effect is a datatype with 3 generic type parameters:
- * `R`: represents the environment required to run the program
- * `E`: represents the error that can be produced by the program
  * `A`: represents the value that can be produced by the program
+ * `E`: represents the error that can be produced by the program
+ * `R`: represents the environment required to run the program
  *
- * Resulting in: Effect<R, E, A>
+ * Resulting in: Effect<A, E, R>
  *
  */
 
-type Program<Environment, Error, Success> = Effect<Environment, Error, Success>;
+type Program<Success, Error, Environment> = Effect.Effect<
+  Success,
+  Error,
+  Environment
+>;
 
 type Process = any;
 type Stdout = any;
@@ -48,12 +52,12 @@ type Stderr = any;
 /**
  * Let's just model a simple command-line interface program (with a very high
  * level of abstraction). We can say that our command line program requires
- * a process to run, that will be granted by the OS. It's represented by the first
- * generic type parameter `R`. Then, our program can fail with an error of type
+ * a process to run, that will be granted by the OS. It's represented by the
+ * generic type parameter `R`. Then our program can fail with an error of type
  * `E` (Standard Error) or succeed with a value of type `A` (Standard Output).
  */
 
-type CommandLineProgram = Program<Process, Stderr, Stdout>;
+type CommandLineProgram = Program<Stdout, Stderr, Process>;
 
 /**
  * Having these 3 generic parameters explicitly defined in the type signature

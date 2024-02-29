@@ -1,5 +1,5 @@
 <p align="center" width="100%">
-  <img src="https://github.com/antoine-coulon/effect-introduction/assets/43391199/7ea5463f-1aae-47cc-a20a-c87f2c9224db" alt="Effect, next generation TypeScript">
+  <img src="https://github.com/antoine-coulon/effect-introduction/assets/43391199/eafb4846-0d9c-466d-a50e-d5bc782bff93" alt="Effect, next generation TypeScript">
 </p>
 
 **Important note: This is still in the making but as this was requested, I'm open-sourcing the first version**.
@@ -63,20 +63,20 @@ an environment to run, that can fail with an error or succeed with a value.
 
 > You can see the original conversation started by @mikearnaldi [just there in Effect's Discord](https://discord.com/channels/795981131316985866/795983589644304396/948653981863923813)
  
-Consequently, Effect is a datatype with 3 generic type parameters:
-`R`: represents the **environment** required to run the program
-`E`: represents the **error** that can be produced by the program
+Consequently, Effect is a generic datatype with 3 type parameters:
 `A`: represents the **value** that can be produced by the program
+`E`: represents the **error** that can be produced by the program
+`R`: represents the **environment** required to run the program
 
-Resulting in: `Effect<R, E, A>`.
+Resulting in: `Effect<A, E, R>`.
 
 ```ts
-import type { Effect } from "effect/Effect";
+import type { Effect } from "effect";
 
-type Program<Environment, Error, Success> = Effect<
-  Environment,
-  Error,
+type Program<Environment, Error, Success> = Effect.Effect<
   Success
+  Error,
+  Environment,
 >;
 ```
 
@@ -87,11 +87,11 @@ generic type parameter `R`. Then, our program can fail with an error of type
 `E` (Standard Error) or succeed with a value of type `A` (Standard Output).
 
 ```ts
-type Process = any;
 type Stdout = any;
 type Stderr = any;
+type Process = any;
 
-type CommandLineProgram = Program<Process, Stderr, Stdout>;
+type CommandLineProgram = Program<Stdout, Stderr, Process>;
 ```
 
 Having these 3 generic parameters explicitly defined in the type signature
@@ -315,10 +315,10 @@ The new kid in town
 
 ```ts
 /**
- * An Effect is modeled with the datatype Effect<R, E, A>
- * (R) represents requirements a computation needs in order to be run
- * (E) represents the failure a computation can produce
+ * An Effect is modeled with the datatype Effect<A, E, R>
  * (A) represents the successful outcome a computation can produce
+ * (E) represents the failure a computation can produce
+ * (R) represents requirements a computation needs in order to be run
  */ 
 interface Effect<R, E, A> {}
 ```
@@ -363,8 +363,8 @@ Effect integrates an `Either<E, A>` under the hood of each computation, making i
 
 
 ```ts
-type _ = Effect<R, E, A>
-//                 ^__^ -> Either-like
+type _ = Effect<A, E, R>
+//              ^__^ -> Either-like
 ```
 
 Do you remember our first raw TypeScript samples? Let's rewrite it with Effect. Let's consider some code:
@@ -372,10 +372,10 @@ Do you remember our first raw TypeScript samples? Let's rewrite it with Effect. 
 ```ts
 
 import { pipe } from "effect/Function";
-import * as Effect from "effect/Effect";
+import { Effect } from "effect";
 
 namespace EffectNumberGeneratorLibrary {
-  export function generateRandomNumber(): Effect.Effect<never, Error, number> {
+  export function generateRandomNumber(): Effect.Effect<number, Error, never> {
     return pipe(
       Effect.sync(() => Math.random()),
       Effect.flatMap((randomNumber) => {
@@ -397,12 +397,12 @@ Let's see that in action, with `multiplyNumberWithoutDealingWithError` that is n
 
 ```ts
 function multiplyNumberWithoutDealingWithError(): Effect.Effect<
-  never,
+  number,
   never, // E is typed as 'never', meaning that this Effect is not expected to produce failures (in the same way as IO<A> or Task<A>). 
-  number
+  never
 > {
   return EffectNumberGeneratorLibrary.generateRandomNumber();
-  // ^ Type 'Effect<never, Error, number>' is not assignable to type 'Effect<never, never, number>'
+  // ^ Type 'Effect<number, Error, never>' is not assignable to type 'Effect<number, never, never>'
 }
 ```
 
@@ -410,9 +410,9 @@ So now that we are aware of the constraint, how do we come from a description of
 
 ```ts
 function multiplyNumberWhenDealingWithError(): Effect.Effect<
+  number,
   never,
-  never,
-  number
+  never
 > {
   return pipe(
     EffectNumberGeneratorLibrary.generateRandomNumber(),
@@ -442,9 +442,9 @@ export class NumberIsTooSmallError {
 
 namespace EffectNumberGeneratorLibrary {
   export function generateRandomNumber(): Effect<
-    never,
+    number,
     NumberIsTooBigError | NumberIsTooSmallError,
-    number
+    never
   > {
     return pipe(
       Effect.sync(() => Math.random()),
@@ -470,7 +470,7 @@ Now that we have failures represented as a union, it allows us to pattern match 
 
 ```ts
 
-function multiplyNumberWithExhaustivePatternMatching(): Effect<never, never, number> {
+function multiplyNumberWithExhaustivePatternMatching(): Effect<number, never, never> {
   // Note how the error channel becomes "never" now that we exhaustive pattern match                                           
   return pipe(
     EffectNumberGeneratorLibrary.generateRandomNumber(),
@@ -491,10 +491,10 @@ In the above case the pattern matching is exhaustive, but if it's not the case, 
 ```ts
 
 function multiplyNumberWithPartialPatternMatching(): Effect.Effect<
-  never,
+  number,
   NumberIsTooBigError,
   // ^ partial pattern matching does not erase all errors
-  number
+  never
 > {
   return pipe(
     Effect2NumberGeneratorLibrary.generateRandomNumber(),
@@ -525,18 +525,18 @@ In our very simple example below, it's only registering the user to a given stor
 
 ```ts
 
-import * as Effect from "effect/Effect";
+import { Effect } from "effect";
 import * as Context from "effect/Context";
 
 interface UserRepository {
-  createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
+  createUser: () => Effect.Effect<CreatedUser, UserAlreadyExistsError, never>;
 }
 
-const UserRepository = Context.Tag<UserRepository>();
+const UserRepository = Context.GenericTag<UserRepository>("UserRepository");
 
 // Use case depending on an abstract User Repository
-function registerUser(): Effect.Effect<UserRepository, UserAlreadyExistsError, CreatedUser> {
-                                    // ^ explicit dependency
+function registerUser(): Effect.Effect<CreatedUser, UserAlreadyExistsError, UserRepository> {
+                                                                            // ^ explicit dependency
   return pipe(
     UserRepository,
     Effect.flatMap((userRepository) => userRepository.createUser()),
@@ -560,7 +560,7 @@ the `R` type parameter of the Effect. If the `R` type parameter is `never`, it m
 
 ```ts
 const _program = useCases.registerUser();
-//    ^ The type here is Effect<UserRepository, UserAlreadyExistsError, CreatedUser>
+//    ^ The type here is Effect<CreatedUser, UserAlreadyExistsError, UserRepository>
 ```
 
 Because the `R` still has `UserRepository`, it means that the dependency needs to be provided in order for the effect to be run.
@@ -571,11 +571,11 @@ Dependencies appearing in the `R` generic type parameter is only refering to int
 This example shows the use of one dependency, but it's important to note that Effect is able to **deeply infer the dependencies required as a TypeScript Union type**, wherever the dependencies come from in the Effect tree:
 
 ```ts
-const effect1: Effect<DependencyA, never, number> = {};
+const effect1: Effect<number, never, DependencyA> = {};
 
-const effect2: Effect<DependencyB, never, number> = {};
+const effect2: Effect<number, never, DependencyB> = {};
 
-const program: Effect<DependencyA | DependencyB, never, number> = Effect.gen(function* ($) {
+const program: Effect<number, never, DependencyA | DependencyB> = Effect.gen(function* ($) {
                       // ^ See how both respective dependencies from "effect1" and "effect2"
                       // now were propagated in the dependencies of our main program, represented as a typed union.
   const result1 = yield* $(effect1);
@@ -612,7 +612,7 @@ pipe(
 Until we provide the service implementation, the program won't compile because all the computation requirements are not satisfied.
 
 ```ts
-Effect.runPromise(something as Effect<SomethingService, never, void>)
+Effect.runPromise(something as Effect<void, never, SomethingService>)
 // ^ This won't compile, a computation for which all the requirements are not satisfied (SomethingService) can't be executed.
 
 Effect.runPromise(
@@ -642,7 +642,7 @@ Their goal is to overcome standard constructor limitations and offer more powerf
 Layers describe a set of required dependencies (In) and produces a set of composed dependencies (Out). During Layer construction, errors can occur, hence the Layer signature:
 
 ```ts
-export interface Layer<RIn, E, ROut> {}
+export interface Layer<ROut, E, RIn> {}
 ```
 
 In the same spirit as for Effects, using Layers for which dependencies are not satisfied will result in compilation errors. 
@@ -669,12 +669,12 @@ Let's come back to our previous section example:
 
 ```ts
 interface UserRepository {
-  createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
+  createUser: () => Effect.Effect<CreatedUser, UserAlreadyExistsError, never>;
 }
 
 const UserRepository = Context.Tag<UserRepository>();
 
-function someUseCase(): Effect.Effect<UserService, UserAlreadyExistsError, CreatedUser> {
+function someUseCase(): Effect.Effect<CreatedUser, UserAlreadyExistsError, UserService> {
   return pipe(
     UserRepository,
     // ^ Just a Tag linked to an interface, there is no implementation yet.
@@ -805,15 +805,12 @@ Thankfully, Effect also comes in with a rich set of builtin ways to deal with re
 Let's rewrite the code examples with Effect.
 
 ```ts
-import * as Effect from "effect/Effect";
-import { pipe } from "effect/Function";
-import * as Duration from "effect/Duration";
-import * as Schedule from "effect/Schedule";
+import { Effect, Duration, Schedule, pipe } from "effect";
 
 const computationWithFiveRetries = pipe(
   Effect.fail(new Error("Some error")),
   // Number of retries
-  Effect.retryN(5)
+  Effect.retry({ times: 5 })
 );
 
 const computationWithRetryUntil = pipe(
@@ -824,7 +821,7 @@ const computationWithRetryUntil = pipe(
     )
   ),
   // Retry until the condition is met
-  Effect.retryUntil((error) => error.message !== "Forbidden")
+  Effect.retry({ until: (error) => error.message !== "Forbidden" })
 );
 ```
  
@@ -833,9 +830,7 @@ And even more complex ones, combining multiple policies to create one composed p
 - Recurs while the time elapsed during the whole policy is less than or equal to 30 seconds
 
 ```ts
-import { pipe } from "effect/Function";
-import * as Duration from "effect/Duration";
-import * as Schedule from "effect/Schedule";
+import { Duration, Schedule, pipe } from "effect";
 
 export const retrySchedule = pipe(
   Schedule.exponential(Duration.millis(10), 2.0),
@@ -1104,10 +1099,7 @@ What's great is that the same composition principles smoothly apply on all modul
 For instance, the [@effect/schema](https://github.com/Effect-TS/schema) library created by [Giulio Canti](https://github.com/gcanti) integrates super nicely, let's take a look at a simple `TodosRepository` implementation:
 
 ```ts
-import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
-import * as Context from "effect/Context";
-import { pipe } from "effect/Function";
+import { Effect, Layer, Context, pipe } from "effect";
 import * as S from "@effect/schema/Schema";
 
 const Todo = S.struct({
@@ -1143,7 +1135,7 @@ const TodosRepositoryLive = Layer.succeed(TodosRepository, {
           ),
         catch: () => new FetchError(id),
       }),
-      Effect.flatMap(S.parse(Todo)),
+      Effect.flatMap(S.decode(Todo)),
       Effect.mapError(() => new DecodeError(id))
     ),
 });
@@ -1406,7 +1398,7 @@ Other interesting facts about the fiber-based runtime:
 
 A Fiber can be thought of as a virtual thread that emulate the same behavior as OS threads with nicer abstractions and without the platform constraints, for instance thousands of virtual threads can be run efficiently in a single-thread allocated to run application code, like Node.js by default (putting worker threads aside). In the context of ZIO, Fibers are scheduled within an OS thread pool running on the JVM. 
 
-Like threads, Fibers are low-level constructs so you don't usually need to manipulate them directly. Instead, you can use a very rich set of concurrent primitives directly using Effects, these are mostly suffixed by **par** (parallel), such as `zipPar`, `forEachPar`, etc.
+Like threads, Fibers are low-level constructs so you don't usually need to manipulate them directly. Instead, you can use a very rich set of concurrent primitives directly using Effects, these can be used through options provided to Effect combinators e.g. `Effect.forEach(() => {}, { concurrency: 30 })`.
 
 
 ## 7. Tracing & Logging

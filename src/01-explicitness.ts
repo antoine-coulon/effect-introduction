@@ -314,11 +314,10 @@ const backofficeService = {
  * explicitness and see how Effect solves that.
  */
 
-import { pipe } from "effect/Function";
-import * as Effect from "effect/Effect";
+import { Effect, pipe } from "effect";
 
 namespace EffectNumberGeneratorLibrary {
-  export function generateRandomNumber(): Effect.Effect<never, Error, number> {
+  export function generateRandomNumber(): Effect.Effect<number, Error, never> {
     return pipe(
       Effect.sync(() => Math.random()),
       Effect.flatMap((randomNumber) => {
@@ -354,9 +353,9 @@ function multiplyNumberWithoutDealingWithError(): Effect.Effect<
 }
 
 function multiplyNumberWhenDealingWithError(): Effect.Effect<
+  number,
   never,
-  never,
-  number
+  never
 > {
   return pipe(
     EffectNumberGeneratorLibrary.generateRandomNumber(),
@@ -382,9 +381,9 @@ export class NumberIsTooSmallError {
 
 namespace Effect2NumberGeneratorLibrary {
   export function generateRandomNumber(): Effect.Effect<
-    never,
+    number,
     NumberIsTooBigError | NumberIsTooSmallError,
-    number
+    never
   > {
     return pipe(
       Effect.sync(() => Math.random()),
@@ -416,9 +415,9 @@ namespace Effect2NumberGeneratorLibrary {
 
 namespace EffectNumberGeneratorLibraryWithUnificationProblem {
   export function generateRandomNumber(): Effect.Effect<
-    never,
+    number,
     NumberIsTooBigError | NumberIsTooSmallError,
-    number
+    never
   > {
     return Effect.flatMap(
       Effect.sync(() => Math.random()),
@@ -448,9 +447,9 @@ import { unify } from "effect/Unify";
 
 namespace EffectNumberGeneratorLibraryWithCleanUnification {
   export function generateRandomNumber(): Effect.Effect<
-    never,
+    number,
     NumberIsTooBigError | NumberIsTooSmallError,
-    number
+    never
   > {
     return Effect.flatMap(
       Effect.sync(() => Math.random()),
@@ -477,10 +476,10 @@ namespace EffectNumberGeneratorLibraryWithCleanUnification {
  */
 
 function multiplyNumberWithExhaustivePatternMatching(): Effect.Effect<
-  never,
+  number,
   never,
   // ^ exhaustive pattern matching erases all errors are we all handle them
-  number
+  never
 > {
   return pipe(
     Effect2NumberGeneratorLibrary.generateRandomNumber(),
@@ -493,10 +492,10 @@ function multiplyNumberWithExhaustivePatternMatching(): Effect.Effect<
 }
 
 function multiplyNumberWithPartialPatternMatching(): Effect.Effect<
-  never,
+  number,
   NumberIsTooBigError,
   // ^ partial pattern matching does not erase all errors
-  number
+  never
 > {
   return pipe(
     Effect2NumberGeneratorLibrary.generateRandomNumber(),
@@ -528,18 +527,18 @@ class UserAlreadyExistsError {
 class CreatedUser {}
 
 interface UserRepository {
-  createUser: () => Effect.Effect<never, UserAlreadyExistsError, CreatedUser>;
+  createUser: () => Effect.Effect<CreatedUser, UserAlreadyExistsError, never>;
 }
 
 import * as Context from "effect/Context";
 
-const UserRepository = Context.Tag<UserRepository>();
+const UserRepository = Context.GenericTag<UserRepository>("UserRepository");
 
 const useCases = {
   registerUser(): Effect.Effect<
-    UserRepository,
+    CreatedUser,
     UserAlreadyExistsError,
-    CreatedUser
+    UserRepository
   > {
     return pipe(
       /**
@@ -605,12 +604,12 @@ interface DependencyA {
   _tag: "DependencyA";
 }
 
-const DependencyA = Context.Tag<DependencyA>();
+const DependencyA = Context.GenericTag<DependencyA>("DependencyA");
 
 interface DependencyB {
   _tag: "DependencyB";
 }
-const DependencyB = Context.Tag<DependencyB>();
+const DependencyB = Context.GenericTag<DependencyB>("DependencyB");
 
 const computation1 = pipe(
   DependencyA,
@@ -655,10 +654,10 @@ const mainProgram = () =>
  */
 
 interface FeatureFlag {
-  isEnabled: (moduleId: number) => Effect.Effect<never, never, boolean>;
+  isEnabled: (moduleId: number) => Effect.Effect<boolean, never, never>;
 }
 
-const FeatureFlag = Context.Tag<FeatureFlag>();
+const FeatureFlag = Context.GenericTag<FeatureFlag>("FeatureFlag");
 
 const mainFeatureFlagProgram = () =>
   pipe(

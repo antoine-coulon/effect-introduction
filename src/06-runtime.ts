@@ -1,7 +1,6 @@
 /** WIP */
 
-import { pipe } from "effect/Function";
-import * as Effect from "effect/Effect";
+import { Effect, pipe } from "effect";
 import { isExit, isSuccess } from "effect/Exit";
 
 function computeEffect() {
@@ -338,11 +337,13 @@ runPromise(simpleProgram).then((result) => {
 
 // Now the real runtime :D
 
-/** 
-Effect.runCallback(programThatDoesnotMakeAnySense, (exit) => {
-  if (isSuccess(exit)) {
-    console.log(exit.value);
-  }
+/**
+Effect.runCallback(programThatDoesnotMakeAnySense, {
+  onExit: (exit) => {
+    if (isSuccess(exit)) {
+      console.log(exit.value);
+    }
+  },
 });
 
 Effect.runPromise(programThatDoesnotMakeAnySense).then((result) => {

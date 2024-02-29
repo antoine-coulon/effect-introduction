@@ -1,8 +1,6 @@
 /** WIP */
 
-import { pipe } from "effect/Function";
-import * as Effect from "effect/Effect";
-import * as Duration from "effect/Duration";
+import { Effect, Duration, pipe } from "effect";
 
 /**
  * BOUNDED VS UNBOUNDED
@@ -55,6 +53,8 @@ const longRunningEffect = pipe(
   })
 );
 
-Effect.runCallback(Effect.race(quickRunningEffect, longRunningEffect), () => {
-  console.log("done");
+Effect.runCallback(Effect.race(quickRunningEffect, longRunningEffect), {
+  onExit: () => {
+    console.log("done");
+  },
 });

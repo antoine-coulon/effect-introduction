@@ -6,11 +6,11 @@ settings:
 
 dependencies:
   '@effect/schema':
-    specifier: 0.63.1
-    version: 0.63.1(effect@2.4.0)(fast-check@3.14.0)
+    specifier: 0.66.5
+    version: 0.66.5(effect@3.0.3)(fast-check@3.14.0)
   effect:
-    specifier: 2.4.0
-    version: 2.4.0
+    specifier: 3.0.3
+    version: 3.0.3
 
 devDependencies:
   '@types/node':
@@ -20,18 +20,18 @@ devDependencies:
     specifier: ^3.12.7
     version: 3.12.7
   typescript:
-    specifier: ^5.3.3
-    version: 5.3.3
+    specifier: 5.4.5
+    version: 5.4.5
 
 packages:
 
-  /@effect/schema@0.63.1(effect@2.4.0)(fast-check@3.14.0):
-    resolution: {integrity: sha512-Vs7g72qbPTLWXZ4jcaPzprfbY1ODZxwqfOTrMhwvSUc6kgt1i2KP88LxFy7dFLJasx3CYPz8MTvP0x8mbBCftw==}
+  /@effect/schema@0.66.5(effect@3.0.3)(fast-check@3.14.0):
+    resolution: {integrity: sha512-xfu5161JyrfAS1Ruwv0RXd4QFiCALbm3iu9nlW9N9K+52wbS0WdO6XUekPZ9V/O7LN+XmlIh5Y9xhJaIWCZ/gw==}
     peerDependencies:
-      effect: ^2.4.0
+      effect: ^3.0.3
       fast-check: ^3.13.2
     dependencies:
-      effect: 2.4.0
+      effect: 3.0.3
       fast-check: 3.14.0
     dev: false
 
@@ -262,8 +262,8 @@ packages:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
     dev: true
 
-  /effect@2.4.0:
-    resolution: {integrity: sha512-HAtFVAbAGYDzfGbrSrX1gzMzXym15zk1+ps72X8W1wdZY0vxq+u23w8u9DhAZjiJPHT4W9ZYL7QWQqpP4t+dSg==}
+  /effect@3.0.3:
+    resolution: {integrity: sha512-mgG+FoWrM4sny8OxDFWCpq+6LwGf9cK/JztVhxZQeZM9ZMXY+lKbdMEQmemNYce0QVAz2+YqUKwhKzOidwbZzg==}
     dev: false
 
   /esbuild@0.17.19:
@@ -348,8 +348,8 @@ packages:
       fsevents: 2.3.2
     dev: true
 
-  /typescript@5.3.3:
-    resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
+  /typescript@5.4.5:
+    resolution: {integrity: sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==}
     engines: {node: '>=14.17'}
     hasBin: true
     dev: true

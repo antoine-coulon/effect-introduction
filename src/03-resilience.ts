@@ -376,7 +376,7 @@ const backgroundJobWithEffectRepeat = pipe(
 
     const timeout = setTimeoutCb(() => {
       console.log("job done");
-      resume(Effect.unit);
+      resume(Effect.void);
     }, 250);
 
     return Effect.sync(() => {

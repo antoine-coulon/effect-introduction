@@ -43,13 +43,13 @@ function longRunningPromise() {
 
 // Promise.race([quickRunningPromise(), longRunningPromise()]);
 
-const quickRunningEffect = pipe(Effect.delay(Duration.seconds(1))(Effect.unit));
+const quickRunningEffect = pipe(Effect.delay(Duration.seconds(1))(Effect.void));
 
 const longRunningEffect = pipe(
-  Effect.delay(Duration.seconds(5))(Effect.unit),
+  Effect.delay(Duration.seconds(5))(Effect.void),
   Effect.onInterrupt(() => {
     console.log("interrupted!");
-    return Effect.unit;
+    return Effect.void;
   })
 );
 

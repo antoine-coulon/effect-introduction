@@ -1,12 +1,12 @@
 import { Effect, Layer, Context, pipe, Duration, Schedule } from "effect";
 import * as S from "@effect/schema/Schema";
 
-const Todo = S.struct({
-  id: S.number,
-  completed: S.boolean,
+const Todo = S.Struct({
+  id: S.Number,
+  completed: S.Boolean,
 });
 
-type Todo = S.Schema.To<typeof Todo>;
+interface Todo extends S.Schema.Type<typeof Todo> {}
 
 class FetchError {
   readonly _tag = "FetchError";

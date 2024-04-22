@@ -320,7 +320,7 @@ The new kid in town
  * (E) represents the failure a computation can produce
  * (R) represents requirements a computation needs in order to be run
  */ 
-interface Effect<R, E, A> {}
+interface Effect<A, E, R> {}
 ```
 
 In the context of explicit outcomes, `Effect` is a data type that can be used to model everything at the same time:

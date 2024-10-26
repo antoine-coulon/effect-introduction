@@ -332,7 +332,7 @@ But also Effect is:
 - lazy by nature
 - highly composable
 - highly type-safe
-- explicit errors and dependencies management (dependencies and `R` and discussed right after)
+- explicit errors and dependencies management (dependencies and `R` are discussed right after)
 - builtin concurrency control
 - builtin interruption 
 - builtin retry

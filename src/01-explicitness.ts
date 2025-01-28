@@ -478,7 +478,7 @@ namespace EffectNumberGeneratorLibraryWithCleanUnification {
 function multiplyNumberWithExhaustivePatternMatching(): Effect.Effect<
   number,
   never,
-  // ^ exhaustive pattern matching erases all errors are we all handle them
+  // ^ exhaustive pattern matching erases all errors since we handle them all
   never
 > {
   return pipe(

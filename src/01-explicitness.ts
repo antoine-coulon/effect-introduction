@@ -407,10 +407,10 @@ namespace Effect2NumberGeneratorLibrary {
  *
  * 1. `Effect<never, NumberIsTooBigError, never>` (first Effect.fail)
  * 2. `Effect<never, NumberIsTooSmallError, never>` (second Effect.fail)
- * 3. `Effect<never, never, number>` (Effect.succeed)
+ * 3. `Effect<number, never, never>` (Effect.succeed)
  *
  * What we want is the type just below:
- * `Effect<never, NumberIsTooBigError | NumberIsTooSmallError, number>`
+ * `Effect<number, NumberIsTooBigError | NumberIsTooSmallError, never>`
  */
 
 namespace EffectNumberGeneratorLibraryWithUnificationProblem {

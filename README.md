@@ -1022,7 +1022,7 @@ const backgroundJob = pipe(
 );
 ```
 
-`asyncInterrupt` allows us to way to describe an asynchronous side-effect plus offers us the control over its interruption. The Effect returned in the `asyncInterrupt` will be executed in case `backgroundJob` gets interrupted.
+`asyncInterrupt` allows us to describe an asynchronous side-effect while offering us the control over its interruption. The Effect returned in the `asyncInterrupt` will be executed in case `backgroundJob` gets interrupted.
 
 Using Effect, we have a guarantee that the release Effect returned by the `asyncInterrupt` method will be executed. The interruption model allows us to have a straightforward but also a fine-grained control over interruptibility.
 
@@ -1259,7 +1259,7 @@ Promise.race([quickRunningPromise(), longRunningPromise()]);
 ```
 
 
-Effect are by nature interruptible, meaning that all these operations are ressource-safe.
+Effect are by nature interruptible, meaning that all these operations are resource-safe.
 
 ```ts
 const quickRunningEffect = pipe(
